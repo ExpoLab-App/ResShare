@@ -1,0 +1,22 @@
+{
+  "name": "resshare-sdk",
+  "version": "0.1.0",
+  "description": "JavaScript SDK for ResShare file sharing",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "examples"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "UNLICENSED"
+}

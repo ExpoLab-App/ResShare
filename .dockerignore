@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+reschat_venv/
+
+# Bazel
+backend/bazel/bazel-*
+bazel-*
+
+# Frontend (not needed for backend)
+frontend/node_modules/
+frontend/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md
+!README.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vector DB data (will be regenerated)
+backend/vector_db/*.faiss
+backend/vector_db/*.pkl
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
