@@ -26,49 +26,70 @@ ResShare is a decentralized file sharing application that allows users to secure
 - **Storage**: ResilientDB for Metadata storage and IPFS for File Storage
 - **Authentication**: Session-based authentication
 - **AI/ML**: 
-  - Sentence Transformers for embeddings
-  - FAISS for vector search
-  - Gemini GPT (optional) or local models for response generation
-  - LangChain for text processing
+  - Gemini embeddings (`gemini-embedding-001`) and FAISS vector search
+  - Gemini 2.5 Flash for answers, with extractive fallback when generation is unavailable
+  - LangChain for text chunking
 
 ## Prerequisites
 
 - Python 3.8+
 - Node.js 16+ and npm
 - IPFS daemon running locally
-- (Optional) Gemini API key for enhanced AI responses
+- Google Gemini API key (`GOOGLE_API_KEY` in `.env`) for the AI document chatbot
 
 ## Installation
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/NoBugInMyCode/ResShareDeployable.git
-cd ResShareDeployable
+git clone https://github.com/ResilientApp/ResShare.git
+cd ResShare
 ```
 
 2. **Install backend dependencies:**
 ```bash
-pip install -r requirements.txt
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -r requirements.txt
 ```
 
 3. **Install frontend dependencies:**
 ```bash
 cd frontend
 npm install
-cd ..
 ```
 
-4. **Set up AI features (Optional but recommended):**
+4. **Configure environment variables** (from the project root):
+
 ```bash
-# For enhanced AI responses, set your Gemini API key
-export GOOGLE_API_KEY="your-gemini-api-key-here"
+cp env.example .env
+# Edit .env: set GOOGLE_API_KEY, FLASK_SECRET_KEY, and other values as needed
 ```
+
+| Variable | Purpose |
+|----------|---------|
+| `GOOGLE_API_KEY` | Required for AI chat — document embeddings, search, and Gemini answers |
+| `FLASK_SECRET_KEY` | Session signing (use a strong value in production) |
+| `FLASK_RUN_PORT` | Backend port (default `5000`; set if port 5000 is already in use) |
+| `CORS_ORIGINS` | Extra frontend origins allowed to call the API |
+| `KV_SERVICE_URL` | ResilientDB KV endpoint |
+| `STORAGE_TYPE` | `memory` (local dev) or `resilientdb` |
+
+For the frontend, point the UI at your backend URL:
+
+```bash
+cd frontend
+cp .env.example .env.local
+# Set REACT_APP_API_BASE_URL to match your backend (e.g. http://localhost:5001 if FLASK_RUN_PORT=5001)
+```
+
+> **Note:** Copy `env.example` to `.env` in the **project root** (not `backend/.env`). The app loads `.env` from the directory where you run `python app.py`.
 
 ## Running the Application
 
-1. **Start the IPFS daemon:**
+1. **Start the IPFS daemons:**
 ```bash
 ipfs daemon
+ipfs-cluster-service daemon
 ```
 *To install IPFS Cluster Service, please refer to [this link](https://ipfscluster.io/download/)*
 
@@ -113,17 +134,17 @@ The application will be available at:
 
 ## Configuration
 
-### Basic Configuration (No API key required)
-The AI chatbot works out of the box with:
-- Local sentence transformer models for embeddings
-- FAISS for fast vector search
-- Simple extractive responses
+### AI chatbot
 
-### Enhanced Configuration (With Gemini)
-For higher quality responses, set up Gemini:
-```bash
-export GOOGLE_API_KEY="sk-your-key-here"
-```
+Set `GOOGLE_API_KEY` in `.env` (see step 4 above). The key powers:
+
+- **Embeddings & search** — Gemini `gemini-embedding-001` indexes your documents into a per-user FAISS store
+- **Generated answers** — Gemini 2.5 Flash synthesizes a reply from retrieved chunks
+
+If the generative model is unavailable, the chatbot uses an **extractive fallback**: it returns the most relevant passage from your top-matching file chunk instead of rewriting it (no paraphrasing or summarization).
+
+Without `GOOGLE_API_KEY`, document indexing and AI search will not work.
+
 
 ## Usage
 
