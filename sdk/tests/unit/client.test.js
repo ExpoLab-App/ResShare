@@ -59,7 +59,7 @@ test('login sends JSON body and credentials', async () => {
     FormData: MockFormData
   });
 
-  await client.auth.login({ username: 'alice', password: 'secret' });
+  await client.auth.login({ username: 'alice', password: 'Pass@123' });
 
   assert.equal(captured.url, 'http://localhost:5000/login');
   assert.equal(captured.options.method, 'POST');
@@ -67,7 +67,7 @@ test('login sends JSON body and credentials', async () => {
   assert.equal(captured.options.headers['Content-Type'], 'application/json');
   assert.deepEqual(JSON.parse(captured.options.body), {
     username: 'alice',
-    password: 'secret'
+    password: 'Pass@123'
   });
 });
 
@@ -138,7 +138,7 @@ test('persists session cookie between requests in Node', async () => {
     FormData: MockFormData
   });
 
-  await client.auth.login({ username: 'alice', password: 'secret' });
+  await client.auth.login({ username: 'alice', password: 'Pass@123' });
   await client.files.createFolder('docs');
 
   assert.equal(calls[1].options.headers.Cookie, 'session=abc123');

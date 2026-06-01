@@ -61,7 +61,7 @@ npm install
 4. **Configure environment variables** (from the project root):
 
 ```bash
-cp env.example .env
+cp .env.example .env
 # Edit .env: set GOOGLE_API_KEY, FLASK_SECRET_KEY, and other values as needed
 ```
 
@@ -162,6 +162,19 @@ Without `GOOGLE_API_KEY`, document indexing and AI search will not work.
 3. **Ask Questions**: Use the AI Chat interface to query your documents
 4. **Get Intelligent Answers**: Receive responses with source attribution
 5. **Explore Knowledge Base**: View statistics about your indexed documents
+
+## MCP Server (AI clients)
+
+ResShare includes a local [Model Context Protocol](https://modelcontextprotocol.io/) server so tools like **Cursor** and **Claude Desktop** can list files, run document Q&A, upload files, and share items using your ResShare account.
+
+See **[docs/MCP.md](docs/MCP.md)** for setup, environment variables, client configuration, and security notes.
+
+```bash
+export RESSHARE_USERNAME=your-user
+export RESSHARE_PASSWORD=your-password
+python -m mcp_server.server
+```
+
 ## Architecture
 
 ### RAG Pipeline

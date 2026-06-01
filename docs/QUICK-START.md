@@ -91,12 +91,12 @@ curl http://localhost:5000/
 # Signup
 curl -X POST http://localhost:5000/signup \
   -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"testpass123"}'
+  -d '{"username":"testuser","password":"Pass@123"}'
 
 # Login
 curl -X POST http://localhost:5000/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"testpass123"}' \
+  -d '{"username":"testuser","password":"Pass@123"}' \
   -c cookies.txt
 
 # Create folder (requires login cookie)
@@ -246,4 +246,3 @@ sudo certbot --nginx -d your-domain.com
 ## Full Documentation
 
 For detailed instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
-

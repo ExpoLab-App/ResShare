@@ -129,14 +129,14 @@ docker rm resshare-backend
    ```bash
    curl -X POST http://localhost:5000/signup \
      -H "Content-Type: application/json" \
-     -d '{"username":"testuser","password":"testpass123"}'
+     -d '{"username":"testuser","password":"Pass@123"}'
    ```
 
 4. **Test login:**
    ```bash
    curl -X POST http://localhost:5000/login \
      -H "Content-Type: application/json" \
-     -d '{"username":"testuser","password":"testpass123"}' \
+     -d '{"username":"testuser","password":"Pass@123"}' \
      -c cookies.txt
    ```
 
@@ -321,7 +321,7 @@ docker compose logs -f
    ```bash
    curl -X POST http://your-ec2-public-ip:5000/signup \
      -H "Content-Type: application/json" \
-     -d '{"username":"testuser","password":"testpass123"}'
+     -d '{"username":"testuser","password":"Pass@123"}'
    ```
 
 ### Step 8: Configure Frontend to Use EC2 Backend
@@ -567,4 +567,3 @@ For issues and questions:
 - Check logs: `docker compose logs`
 - GitHub Issues: [Your repo URL]
 - Documentation: [Your docs URL]
-

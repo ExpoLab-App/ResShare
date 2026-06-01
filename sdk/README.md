@@ -20,7 +20,7 @@ const client = new ResShareClient({
   baseUrl: 'http://localhost:5000'
 });
 
-await client.auth.login({ username: 'alice', password: 'secret' });
+await client.auth.login({ username: 'alice', password: 'Pass@123' });
 
 const folderResult = await client.files.createFolder('docs');
 console.log(folderResult.status);
