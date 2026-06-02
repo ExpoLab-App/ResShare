@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-Smoke test: spawn the ResShare MCP server over stdio, list tools, call get_auth_status.
+Smoke test: connect to the ResShare Streamable HTTP MCP server, list tools,
+and call get_auth_status.
 
-Requires a running Flask backend and RESSHARE_* env vars (see docs/MCP.md).
+Requires the Flask backend and MCP HTTP server to be running with RESSHARE_*
+env vars (see docs/MCP.md).
 
 Usage (from repo root):
     python scripts/mcp_smoke.py
@@ -77,10 +79,10 @@ def ensure_account_ready(env: dict[str, str]) -> bool:
 
 
 async def main() -> int:
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamable_http_client
 
-    from mcp_server.config import load_mcp_env
+    from mcp_server.config import load_mcp_env, load_server_settings
 
     load_mcp_env()
 
@@ -99,14 +101,14 @@ async def main() -> int:
     if not ensure_account_ready(env):
         return 1
 
-    server_params = StdioServerParameters(
-        command=sys.executable,
-        args=["-m", "mcp_server.server"],
-        env=env,
-        cwd=str(REPO_ROOT),
-    )
+    host, port, path = load_server_settings()
+    mcp_url = os.environ.get("RESSHARE_MCP_URL", "").strip()
+    if not mcp_url:
+        mcp_url = f"http://{host}:{port}{path}"
 
-    async with stdio_client(server_params) as (read, write):
+    print(f"Connecting to MCP server: {mcp_url}")
+
+    async with streamable_http_client(mcp_url) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
 

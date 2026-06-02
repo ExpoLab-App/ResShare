@@ -1,5 +1,5 @@
 """
-ResShare MCP server (stdio).
+ResShare MCP server (Streamable HTTP).
 
 Run from repository root:
     python -m mcp_server.server
@@ -12,7 +12,7 @@ from typing import Any, Optional
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server.client import ResShareApiError, ResShareClient
-from mcp_server.config import load_settings
+from mcp_server.config import load_server_settings, load_settings
 from mcp_server.responses import tool_response
 from mcp_server.validation import (
     ValidationError,
@@ -26,7 +26,14 @@ from mcp_server.validation import (
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-mcp = FastMCP("reshare", json_response=True)
+_MCP_HOST, _MCP_PORT, _MCP_PATH = load_server_settings()
+mcp = FastMCP(
+    "reshare",
+    host=_MCP_HOST,
+    port=_MCP_PORT,
+    streamable_http_path=_MCP_PATH,
+    json_response=True,
+)
 
 _client: Optional[ResShareClient] = None
 
@@ -218,11 +225,19 @@ def share_file(path: str, target: str) -> dict[str, Any]:
 
 def main() -> None:
     try:
-        load_settings()
+        settings = load_settings()
     except ValueError as exc:
         logger.error("%s", exc)
         sys.exit(1)
-    mcp.run(transport="stdio")
+    logger.info(
+        "Starting ResShare MCP Streamable HTTP server on http://%s:%s%s "
+        "(ResShare API: %s)",
+        settings.host,
+        settings.port,
+        settings.path,
+        settings.api_base_url,
+    )
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

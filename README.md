@@ -165,7 +165,7 @@ Without `GOOGLE_API_KEY`, document indexing and AI search will not work.
 
 ## MCP Server (AI clients)
 
-ResShare includes a local [Model Context Protocol](https://modelcontextprotocol.io/) server so tools like **Cursor** and **Claude Desktop** can list files, run document Q&A, upload files, and share items using your ResShare account.
+ResShare includes a Streamable HTTP [Model Context Protocol](https://modelcontextprotocol.io/) server that can list files, run document Q&A, upload files, and share items using a configured ResShare account.
 
 See **[docs/MCP.md](docs/MCP.md)** for setup, environment variables, client configuration, and security notes.
 
@@ -173,6 +173,12 @@ See **[docs/MCP.md](docs/MCP.md)** for setup, environment variables, client conf
 export RESSHARE_USERNAME=your-user
 export RESSHARE_PASSWORD=your-password
 python -m mcp_server.server
+```
+
+Default MCP endpoint:
+
+```text
+http://127.0.0.1:8126/mcp
 ```
 
 ## Architecture

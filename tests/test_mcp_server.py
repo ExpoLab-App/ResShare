@@ -51,6 +51,9 @@ class TestResShareClient(unittest.TestCase):
             api_base_url="http://127.0.0.1:5000",
             username="alice",
             password="Pass@123",
+            host="127.0.0.1",
+            port=8126,
+            path="/mcp",
         )
 
     @patch("mcp_server.client.requests.Session")
@@ -166,6 +169,28 @@ class TestMcpTools(unittest.TestCase):
 
         self.assertFalse(result["ok"])
         get_client.assert_not_called()
+
+    @patch("mcp_server.server.load_settings")
+    @patch("mcp_server.server.mcp.run")
+    def test_main_runs_streamable_http_transport(
+        self,
+        run: MagicMock,
+        load_settings: MagicMock,
+    ) -> None:
+        from mcp_server import server
+
+        load_settings.return_value = McpSettings(
+            api_base_url="http://127.0.0.1:5000",
+            username="alice",
+            password="Pass@123",
+            host="127.0.0.1",
+            port=8126,
+            path="/mcp",
+        )
+
+        server.main()
+
+        run.assert_called_once_with(transport="streamable-http")
 
 
 if __name__ == "__main__":
