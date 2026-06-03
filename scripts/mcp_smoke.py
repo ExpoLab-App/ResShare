@@ -82,7 +82,7 @@ async def main() -> int:
     from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
 
-    from mcp_server.config import load_mcp_env, load_server_settings
+    from mcp_server.config import MCP_PATH, load_mcp_env, load_server_settings
 
     load_mcp_env()
 
@@ -101,10 +101,8 @@ async def main() -> int:
     if not ensure_account_ready(env):
         return 1
 
-    host, port, path = load_server_settings()
-    mcp_url = os.environ.get("RESSHARE_MCP_URL", "").strip()
-    if not mcp_url:
-        mcp_url = f"http://{host}:{port}{path}"
+    host, port, _ = load_server_settings()
+    mcp_url = f"http://{host}:{port}{MCP_PATH}"
 
     print(f"Connecting to MCP server: {mcp_url}")
 
@@ -120,7 +118,7 @@ async def main() -> int:
                 "get_auth_status",
                 "list_files",
                 "list_shared_items",
-                "ask_documents",
+                "read_file",
                 "get_chat_stats",
                 "create_folder",
                 "upload_file",

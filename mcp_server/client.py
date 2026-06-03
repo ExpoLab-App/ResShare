@@ -97,8 +97,35 @@ class ResShareClient:
     def list_shared_items(self) -> dict[str, Any]:
         return self._json_request("GET", "/shared")
 
-    def ask_documents(self, query: str) -> dict[str, Any]:
-        return self._json_request("POST", "/chat", json={"query": query})
+    def download_file(self, path: str, *, is_shared: bool = False) -> tuple[bytes, str]:
+        response = self.request(
+            "POST",
+            "/download",
+            json={"path": path, "is_shared": is_shared},
+            timeout=120,
+        )
+        if response.ok:
+            filename = _filename_from_response(response, path)
+            return response.content, filename
+
+        payload: dict[str, Any] = {}
+        try:
+            parsed = response.json()
+            if isinstance(parsed, dict):
+                payload = parsed
+        except ValueError:
+            pass
+
+        message = (
+            payload.get("message")
+            or payload.get("result")
+            or f"Download failed with status {response.status_code}"
+        )
+        raise ResShareApiError(
+            message,
+            status_code=response.status_code,
+            payload=payload,
+        )
 
     def get_chat_stats(self) -> dict[str, Any]:
         return self._json_request("GET", "/chat/stats")
@@ -152,6 +179,16 @@ class ResShareClient:
     def _json_request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
         response = self.request(method, path, **kwargs)
         return _parse_json(response, expect_ok=True)
+
+
+def _filename_from_response(response: requests.Response, path: str) -> str:
+    content_disposition = response.headers.get("Content-Disposition", "")
+    marker = "filename="
+    if marker in content_disposition:
+        raw_name = content_disposition.split(marker, maxsplit=1)[1].strip().strip('"')
+        if raw_name:
+            return raw_name
+    return path.rsplit("/", maxsplit=1)[-1]
 
 
 def _parse_json(

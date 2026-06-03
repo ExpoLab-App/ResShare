@@ -43,11 +43,11 @@ def validate_target_username(target: str) -> str:
     return cleaned
 
 
-def validate_chat_query(query: str) -> str:
-    cleaned = query.strip()
-    if not cleaned:
-        raise ValidationError("query cannot be empty")
-    return cleaned
+def validate_file_path(path: str) -> str:
+    normalized = normalize_tree_path(path)
+    if not normalized:
+        raise ValidationError("path cannot be empty")
+    return normalized
 
 
 def validate_local_upload_file(local_path: str) -> tuple[Path, str]:

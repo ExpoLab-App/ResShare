@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
+MCP_PATH = "/mcp"
+
 
 @dataclass(frozen=True)
 class McpSettings:
@@ -44,13 +46,6 @@ def _optional_int(name: str, default: int) -> int:
     return value
 
 
-def _optional_mcp_path() -> str:
-    path = os.environ.get("RESSHARE_MCP_PATH", "/mcp").strip() or "/mcp"
-    if not path.startswith("/"):
-        path = f"/{path}"
-    return path
-
-
 def load_server_settings() -> tuple[str, int, str]:
     load_mcp_env()
     return _read_server_settings()
@@ -59,8 +54,7 @@ def load_server_settings() -> tuple[str, int, str]:
 def _read_server_settings() -> tuple[str, int, str]:
     host = os.environ.get("RESSHARE_MCP_HOST", "127.0.0.1").strip() or "127.0.0.1"
     port = _optional_int("RESSHARE_MCP_PORT", 8126)
-    path = _optional_mcp_path()
-    return host, port, path
+    return host, port, MCP_PATH
 
 
 def load_settings() -> McpSettings:

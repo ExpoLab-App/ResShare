@@ -14,9 +14,10 @@ from mcp.server.fastmcp import FastMCP
 from mcp_server.client import ResShareApiError, ResShareClient
 from mcp_server.config import load_server_settings, load_settings
 from mcp_server.responses import tool_response
+from mcp_server.text_extract import extract_text
 from mcp_server.validation import (
     ValidationError,
-    validate_chat_query,
+    validate_file_path,
     validate_folder_path,
     validate_local_upload_file,
     validate_share_path,
@@ -120,21 +121,29 @@ def list_shared_items() -> dict[str, Any]:
 
 
 @mcp.tool()
-def ask_documents(query: str) -> dict[str, Any]:
-    """Ask a question over the user's uploaded documents using the RAG chat flow."""
+def read_file(path: str, is_shared: bool = False) -> dict[str, Any]:
+    """Read and return the text content of a file at the given ResShare path."""
     try:
-        cleaned = validate_chat_query(query)
+        normalized = validate_file_path(path)
         api_client = _get_client()
-        payload = api_client.ask_documents(cleaned)
-        sources = payload.get("sources", [])
+        file_bytes, filename = api_client.download_file(
+            normalized,
+            is_shared=is_shared,
+        )
+        content = extract_text(file_bytes, filename)
+        if not content:
+            return tool_response(
+                ok=False,
+                message=f"No extractable text in '{filename}'",
+            )
         return tool_response(
             ok=True,
             message="OK",
             data={
-                "answer": payload.get("answer", ""),
-                "chunks_found": payload.get("chunks_found", 0),
+                "path": normalized,
+                "filename": filename,
+                "content": content,
             },
-            sources=sources,
         )
     except ValidationError as exc:
         return _validation_failure(exc)

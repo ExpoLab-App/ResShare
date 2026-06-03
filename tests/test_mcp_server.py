@@ -7,7 +7,7 @@ from mcp_server.client import ResShareApiError, ResShareClient
 from mcp_server.config import McpSettings
 from mcp_server.validation import (
     ValidationError,
-    validate_chat_query,
+    validate_file_path,
     validate_folder_path,
     validate_local_upload_file,
     validate_share_path,
@@ -19,9 +19,9 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_folder_path("root/../secret")
 
-    def test_rejects_empty_query(self) -> None:
+    def test_rejects_empty_file_path(self) -> None:
         with self.assertRaises(ValidationError):
-            validate_chat_query("   ")
+            validate_file_path("   ")
 
     def test_rejects_sharing_root(self) -> None:
         with self.assertRaises(ValidationError):
@@ -84,24 +84,32 @@ class TestResShareClient(unittest.TestCase):
         self.assertFalse(client._authenticated)
 
     @patch("mcp_server.client.requests.Session")
-    def test_ask_documents_retries_auth_on_401(self, session_cls: MagicMock) -> None:
+    def test_download_file_retries_auth_on_401(self, session_cls: MagicMock) -> None:
         session = session_cls.return_value
         client = ResShareClient(self.settings)
         client._authenticated = True
 
-        unauthorized = _mock_response(401, {"message": "NOT_LOGGED_IN"}, ok=False)
-        login_ok = _mock_response(200, {"result": "SUCCESS"})
-        chat_ok = _mock_response(
-            200,
-            {"answer": "hello", "sources": [], "chunks_found": 1},
-        )
+        unauthorized = MagicMock()
+        unauthorized.status_code = 401
+        unauthorized.ok = False
+        unauthorized.headers = {}
+        unauthorized.content = b""
+        unauthorized.json.return_value = {"message": "NOT_LOGGED_IN"}
 
-        session.request.side_effect = [unauthorized, chat_ok]
+        login_ok = _mock_response(200, {"result": "SUCCESS"})
+        download_ok = MagicMock()
+        download_ok.status_code = 200
+        download_ok.ok = True
+        download_ok.headers = {"Content-Disposition": 'attachment; filename="note.txt"'}
+        download_ok.content = b"hello world"
+
+        session.request.side_effect = [unauthorized, download_ok]
         session.post.return_value = login_ok
 
-        payload = client.ask_documents("what is in my docs?")
+        file_bytes, filename = client.download_file("root/doc/note.txt")
 
-        self.assertEqual(payload["answer"], "hello")
+        self.assertEqual(file_bytes, b"hello world")
+        self.assertEqual(filename, "note.txt")
         self.assertEqual(session.post.call_count, 1)
 
     @patch("mcp_server.client.requests.Session")
@@ -162,13 +170,28 @@ class TestMcpTools(unittest.TestCase):
         self.assertEqual(result["data"]["username"], "alice")
 
     @patch("mcp_server.server._get_client")
-    def test_ask_documents_validation(self, get_client: MagicMock) -> None:
+    def test_read_file_validation(self, get_client: MagicMock) -> None:
         from mcp_server import server
 
-        result = server.ask_documents("  ")
+        result = server.read_file("  ")
 
         self.assertFalse(result["ok"])
         get_client.assert_not_called()
+
+    @patch("mcp_server.server._get_client")
+    def test_read_file_returns_content(self, get_client: MagicMock) -> None:
+        from mcp_server import server
+
+        client = MagicMock()
+        client.download_file.return_value = (b"line one\nline two", "brief.txt")
+        get_client.return_value = client
+
+        result = server.read_file("root/doc/brief.txt")
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["data"]["filename"], "brief.txt")
+        self.assertEqual(result["data"]["content"], "line one\nline two")
+        client.download_file.assert_called_once_with("root/doc/brief.txt", is_shared=False)
 
     @patch("mcp_server.server.load_settings")
     @patch("mcp_server.server.mcp.run")
@@ -191,6 +214,33 @@ class TestMcpTools(unittest.TestCase):
         server.main()
 
         run.assert_called_once_with(transport="streamable-http")
+
+
+class TestSportsMemorySeed(unittest.TestCase):
+    def test_seed_corpus_has_separate_domain_files(self) -> None:
+        from scripts.seed_2026_sports_memory import SPORTS_BRIEFINGS
+
+        expected_files = {
+            "2026_sports_world_cup_brief.txt",
+            "2026_sports_winter_olympics_brief.txt",
+            "2026_sports_formula_1_brief.txt",
+            "2026_sports_ufc_recent_events_brief.txt",
+            "2026_sports_ipl_playoffs_brief.txt",
+            "2026_sports_premier_league_brief.txt",
+            "2026_sports_bundesliga_brief.txt",
+            "2026_sports_laliga_brief.txt",
+        }
+
+        self.assertEqual(set(SPORTS_BRIEFINGS), expected_files)
+
+    def test_seed_corpus_forces_file_selection(self) -> None:
+        from scripts.seed_2026_sports_memory import SPORTS_BRIEFINGS
+
+        self.assertIn("UFC Fight Night: Muhammad vs Bonfim", SPORTS_BRIEFINGS["2026_sports_ufc_recent_events_brief.txt"])
+        self.assertIn("Qualifier 1: Royal Challengers Bengaluru vs Gujarat Titans", SPORTS_BRIEFINGS["2026_sports_ipl_playoffs_brief.txt"])
+        self.assertIn("Arsenal won the 2025/26 Premier League title", SPORTS_BRIEFINGS["2026_sports_premier_league_brief.txt"])
+        self.assertIn("Bayern Munich finished first", SPORTS_BRIEFINGS["2026_sports_bundesliga_brief.txt"])
+        self.assertIn("Matchday 36 snapshot", SPORTS_BRIEFINGS["2026_sports_laliga_brief.txt"])
 
 
 if __name__ == "__main__":

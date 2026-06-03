@@ -37,8 +37,8 @@ configured ResShare account and holds that session cookie in memory.
 | `RESSHARE_PASSWORD` | Yes | - | Password for the configured user |
 | `RESSHARE_MCP_HOST` | No | `127.0.0.1` | MCP HTTP bind host |
 | `RESSHARE_MCP_PORT` | No | `8126` | MCP HTTP bind port |
-| `RESSHARE_MCP_PATH` | No | `/mcp` | Streamable HTTP MCP path |
-| `RESSHARE_MCP_URL` | No | derived from host/port/path | Smoke-test target URL |
+
+The MCP endpoint path is fixed at `/mcp`.
 
 Use a dedicated test account. Do not commit credentials.
 
@@ -84,7 +84,7 @@ MCP client configuration example:
 | `get_auth_status` | Whether the configured ResShare session is authenticated |
 | `list_files` | User file tree plus shared-item summary |
 | `list_shared_items` | Items shared with the configured user |
-| `ask_documents` | RAG Q&A over uploaded documents |
+| `read_file` | Download a file and return extracted text (PDF, DOCX, TXT) |
 | `get_chat_stats` | Per-user vector-store stats |
 | `create_folder` | Create a folder under an owned path |
 | `upload_file` | Upload a local PDF, DOCX, or TXT file |
