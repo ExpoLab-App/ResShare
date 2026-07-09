@@ -60,3 +60,4 @@ MODULE.bazel.lock
 .claude/
 AGENTS.md
 qa-test.txt
+temp/
