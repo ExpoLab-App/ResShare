@@ -63,7 +63,9 @@ class ShareManager:
 
                 node = root_node.find_node_by_path(target_path)
                 if node:
-                    nodes.append(node.to_dict())
+                    resolved_node = node.to_dict()
+                    resolved_node["shared_path"] = target_path
+                    nodes.append(resolved_node)
 
             if nodes:
                 resolved[from_user] = nodes

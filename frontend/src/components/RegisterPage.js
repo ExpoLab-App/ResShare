@@ -161,16 +161,19 @@ const RegisterPage = () => {
           <Paper
             elevation={6}
             sx={{
-              padding: 4,
+              padding: { xs: 3, sm: 4 },
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               width: '100%',
-              maxWidth: 400,
-              borderRadius: 3,
-              background: darkMode 
-                ? 'linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%)'
-                : 'linear-gradient(145deg, #ffffff 0%, #f5f5f5 100%)',
+              maxWidth: 420,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+              boxShadow: darkMode
+                ? '0 24px 60px rgba(0, 0, 0, 0.32)'
+                : '0 24px 60px rgba(21, 37, 52, 0.08)',
             }}
           >
             <Box
@@ -185,7 +188,7 @@ const RegisterPage = () => {
                 sx={{ 
                   fontSize: 48, 
                   color: 'primary.main',
-                  filter: 'drop-shadow(0 2px 4px rgba(25,118,210,0.3))',
+                  filter: 'drop-shadow(0 8px 14px rgba(36, 111, 167, 0.18))',
                 }}
               />
               <Typography 
@@ -193,12 +196,7 @@ const RegisterPage = () => {
                 variant="h4" 
                 sx={{ 
                   fontWeight: 700,
-                  background: darkMode
-                    ? 'linear-gradient(45deg, #42a5f5 30%, #1976d2 90%)'
-                    : 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: 'text.primary',
                 }}
               >
                 ResShare
@@ -259,7 +257,7 @@ const RegisterPage = () => {
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1,
                   },
                 }}
               />
@@ -294,7 +292,7 @@ const RegisterPage = () => {
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1,
                   },
                 }}
               />
@@ -329,7 +327,7 @@ const RegisterPage = () => {
                 sx={{
                   mb: 3,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1,
                   },
                 }}
               />
@@ -344,17 +342,17 @@ const RegisterPage = () => {
                   mt: 1,
                   mb: 2,
                   py: 1.5,
-                  borderRadius: 2,
+                  borderRadius: 1,
                   fontSize: '1rem',
-                  fontWeight: 600,
-                  background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-                  boxShadow: '0 3px 5px 2px rgba(25, 118, 210, .3)',
+                  fontWeight: 800,
+                  backgroundColor: 'primary.main',
+                  boxShadow: 'none',
                   '&:hover': {
-                    background: 'linear-gradient(45deg, #1565c0 30%, #1976d2 90%)',
-                    boxShadow: '0 4px 8px 3px rgba(25, 118, 210, .3)',
+                    backgroundColor: 'primary.dark',
+                    boxShadow: 'none',
                   },
                   '&:disabled': {
-                    background: 'rgba(25, 118, 210, 0.3)',
+                    backgroundColor: 'action.disabledBackground',
                   },
                 }}
               >
@@ -387,7 +385,7 @@ const RegisterPage = () => {
 
         <Box sx={{ mt: 4, textAlign: 'center' }}>
           <Typography variant="caption" color="text.secondary">
-            Join thousands of users sharing files securely
+            Secure file sharing
           </Typography>
         </Box>
       </Box>

@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
-  Grid,
   Paper,
   Typography,
   Box,
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
   Card,
   CardActionArea,
   Chip,
@@ -31,8 +27,7 @@ import {
   Delete,
   MoreVert,
   Download,
-  Psychology,
-  SmartToy,
+  ChevronRight,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
@@ -45,11 +40,11 @@ import useFileDownload from '../hooks/useFileDownload';
 import useItemContextMenu from '../hooks/useItemContextMenu';
 import ConfirmDialog from './ConfirmDialog';
 import FormDialog from './FormDialog';
+import AIAssistantIcon from './AIAssistantIcon';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { user, rootData, shareList, setRootData, setShareList, refreshShareList } = useAuth();
-  const [speedDialOpen, setSpeedDialOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -129,7 +124,6 @@ const HomePage = () => {
 
   const handleCreateFolder = () => {
     setCreateFolderOpen(true);
-    setSpeedDialOpen(false);
   };
 
   const handleConfirmCreateFolder = async (folderName) => {
@@ -165,7 +159,6 @@ const HomePage = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-    setSpeedDialOpen(false);
   };
 
   const handleFileSelected = async (event) => {
@@ -376,45 +369,96 @@ const HomePage = () => {
     handleMenuClose();
   };
 
+  const sectionSx = {
+    p: { xs: 2, md: 2.5 },
+    borderRadius: 2,
+    backgroundColor: 'background.paper',
+  };
+
+  const fileCardSx = {
+    width: '100%',
+    minHeight: 124,
+    borderRadius: 1,
+    backgroundColor: 'background.paper',
+    boxShadow: 'none',
+    transition: 'transform 160ms ease, border-color 160ms ease, background-color 160ms ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      borderColor: 'primary.main',
+      backgroundColor: 'action.hover',
+    },
+  };
+
+  const iconFrameSx = {
+    width: 46,
+    height: 46,
+    display: 'grid',
+    placeItems: 'center',
+    borderRadius: 1,
+    backgroundColor: (theme) => theme.palette.mode === 'dark'
+      ? 'rgba(142, 205, 247, 0.12)'
+      : 'rgba(36, 111, 167, 0.08)',
+    border: (theme) => theme.palette.mode === 'dark'
+      ? '1px solid rgba(142, 205, 247, 0.2)'
+      : '1px solid rgba(36, 111, 167, 0.14)',
+  };
+
+  const menuButtonSx = {
+    bgcolor: (theme) => theme.palette.mode === 'dark'
+      ? 'rgba(17, 20, 23, 0.9)'
+      : 'rgba(255, 255, 255, 0.92)',
+    border: '1px solid',
+    borderColor: 'divider',
+    '&:hover': {
+      bgcolor: 'action.hover',
+      borderColor: 'primary.main',
+    },
+  };
+
+  const statCardSx = (color) => ({
+    p: 2,
+    borderRadius: 2,
+    boxShadow: 'none',
+    borderLeft: '4px solid',
+    borderLeftColor: color,
+    backgroundColor: 'background.paper',
+  });
+
   const renderRootItems = () => {
     if (!rootData || !rootData.children) return null;
 
     return Object.entries(rootData.children).map(([name, item]) => (
-      <Grid item xs={12} sm={6} md={4} lg={3} key={name}>
-        <Card
-          sx={{
-            height: '100%',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: 6,
-            },
-          }}
-        >
-          <Box sx={{ position: 'relative' }}>
-            <CardActionArea
-              onClick={() => handleFileClick(name, item)}
-              sx={{ height: '100%', p: 2 }}
+      <Card
+        key={name}
+        sx={fileCardSx}
+      >
+        <Box sx={{ position: 'relative' }}>
+          <CardActionArea
+            onClick={() => handleFileClick(name, item)}
+            sx={{ height: '100%', p: 2 }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1.5,
+              }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
-              >
+              <Box sx={iconFrameSx}>
                 {item.is_folder ? (
-                  <Folder sx={{ fontSize: 48, color: 'primary.main' }} />
+                  <Folder sx={{ fontSize: 30, color: 'primary.main' }} />
                 ) : (
-                  <InsertDriveFile sx={{ fontSize: 48, color: 'text.secondary' }} />
+                  <InsertDriveFile sx={{ fontSize: 30, color: 'secondary.main' }} />
                 )}
+              </Box>
+              <Box sx={{ minWidth: 0, pr: 3 }}>
                 <Typography
-                  variant="subtitle1"
-                  align="center"
+                  variant="subtitle2"
                   sx={{
-                    fontWeight: 500,
+                    fontWeight: 800,
                     wordBreak: 'break-word',
+                    lineHeight: 1.25,
+                    mb: 0.75,
                   }}
                 >
                   {name}
@@ -427,55 +471,37 @@ const HomePage = () => {
                   />
                 )}
               </Box>
-            </CardActionArea>
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                zIndex: 1,
-              }}
-            >
-              <Tooltip title="More options">
-                <IconButton
-                  onClick={(e) => handleMenuOpen(e, { name, ...item })}
-                  size="small"
-                  sx={{
-                    bgcolor: 'background.paper',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                    },
-                  }}
-                >
-                  <MoreVert />
-                </IconButton>
-              </Tooltip>
             </Box>
+          </CardActionArea>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              zIndex: 1,
+            }}
+          >
+            <Tooltip title="More options">
+              <IconButton
+                onClick={(e) => handleMenuOpen(e, { name, ...item })}
+                size="small"
+                sx={menuButtonSx}
+              >
+                <MoreVert />
+              </IconButton>
+            </Tooltip>
           </Box>
-        </Card>
-      </Grid>
+        </Box>
+      </Card>
     ));
   };
 
   const renderSharedItems = () => {
-    let sharedItemsArray = [];
+    const sharedOwners = Object.entries(shareList || {}).filter(
+      ([, nodes]) => Array.isArray(nodes) && nodes.length > 0
+    );
 
-    if (shareList && typeof shareList === 'object') {
-      Object.entries(shareList).forEach(([fromUser, nodes]) => {
-        if (Array.isArray(nodes)) {
-          nodes.forEach(node => {
-            sharedItemsArray.push({
-              name: node.name || 'Shared Item',
-              sharedBy: fromUser,
-              node: node,
-              is_folder: node.is_folder
-            });
-          });
-        }
-      });
-    }
-
-    if (sharedItemsArray.length === 0) {
+    if (sharedOwners.length === 0) {
       return (
         <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
           No shared items yet
@@ -484,109 +510,85 @@ const HomePage = () => {
     }
 
     return (
-      <Grid container spacing={2}>
-        {sharedItemsArray.map((item, index) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-            <Card
-              sx={{
-                height: '100%',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6,
-                },
-              }}
-            >
-              <Box sx={{ position: 'relative' }}>
-                <CardActionArea
-                  onClick={() => item.is_folder ? handleFolderClick(`${item.sharedBy}/${item.name}`) : handleDownload(item)}
-                  sx={{ height: '100%', p: 2 }}
-                >
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fit, minmax(220px, 1fr))' },
+          gap: 1.5,
+        }}
+      >
+        {sharedOwners.map(([fromUser, nodes]) => {
+          const folderCount = nodes.filter((node) => node.is_folder).length;
+          const itemLabel = `${nodes.length} item${nodes.length === 1 ? '' : 's'} shared`;
+          const typeLabel = folderCount
+            ? `${folderCount} folder${folderCount === 1 ? '' : 's'}`
+            : 'Files only';
+
+          return (
+            <Card sx={fileCardSx} key={fromUser}>
+              <CardActionArea
+                onClick={() => navigate(`/shared/${encodeURIComponent(fromUser)}`)}
+                aria-label={`View items shared by ${fromUser}`}
+                sx={{ height: '100%', p: 2 }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                   <Box
                     sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 2,
+                      ...iconFrameSx,
+                      backgroundColor: (theme) => theme.palette.mode === 'dark'
+                        ? 'rgba(232, 186, 117, 0.12)'
+                        : 'rgba(168, 117, 50, 0.09)',
+                      border: (theme) => theme.palette.mode === 'dark'
+                        ? '1px solid rgba(232, 186, 117, 0.18)'
+                        : '1px solid rgba(168, 117, 50, 0.14)',
                     }}
                   >
-                    {item.is_folder ? (
-                      <Folder sx={{ fontSize: 48, color: 'primary.main' }} />
-                    ) : (
-                      <InsertDriveFile sx={{ fontSize: 48, color: 'text.secondary' }} />
-                    )}
-                    <Typography
-                      variant="subtitle1"
-                      align="center"
-                      sx={{
-                        fontWeight: 500,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {item.name}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="center"
-                    >
-                      Shared by {item.sharedBy}
-                    </Typography>
-                    {!item.is_folder && item.node.file_obj && (
-                      <Chip
-                        label={`${(item.node.file_obj.size / 1024).toFixed(1)} KB`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
+                    <People sx={{ fontSize: 30, color: 'secondary.main' }} />
                   </Box>
-                </CardActionArea>
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    zIndex: 1,
-                  }}
-                >
-                  <Tooltip title="More options">
-                    <IconButton
-                      onClick={(e) => handleMenuOpen(e, item, true)}
-                      size="small"
+                  <Box sx={{ minWidth: 0, pr: 3 }}>
+                    <Typography
+                      variant="subtitle2"
                       sx={{
-                        bgcolor: 'background.paper',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
+                        fontWeight: 800,
+                        wordBreak: 'break-word',
+                        lineHeight: 1.25,
+                        mb: 0.5,
                       }}
                     >
-                      <MoreVert />
-                    </IconButton>
-                  </Tooltip>
+                      {fromUser}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      {itemLabel}
+                    </Typography>
+                    <Chip
+                      label={typeLabel}
+                      size="small"
+                      variant="outlined"
+                      sx={{ mt: 0.75, width: 'fit-content' }}
+                    />
+                  </Box>
                 </Box>
-              </Box>
+                <ChevronRight
+                  aria-hidden="true"
+                  sx={{ position: 'absolute', top: 16, right: 12, color: 'text.secondary' }}
+                />
+              </CardActionArea>
             </Card>
-          </Grid>
-        ))}
-      </Grid>
+          );
+        })}
+      </Box>
     );
   };
 
-  const speedDialActions = [
-    {
-      icon: <CreateNewFolder />,
-      name: 'Create Folder',
-      onClick: handleCreateFolder,
-    },
-    {
-      icon: <Upload />,
-      name: 'Upload File',
-      onClick: handleUploadFile,
-    },
-  ];
-
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container
+      maxWidth={false}
+      sx={{
+        py: { xs: 2, md: 3 },
+        px: { xs: 2, md: 3, lg: 4 },
+        width: '100%',
+      }}
+    >
       {/* Hidden file input */}
       <input
         type="file"
@@ -597,186 +599,169 @@ const HomePage = () => {
         multiple
       />
 
-      {/* Welcome Section */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-          Welcome back, {user}!
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage your files and folders with ease
-        </Typography>
-      </Box>
-
-      <Grid container spacing={3}>
-        {/* Left Side - My Files and Shared With Me */}
-        <Grid item size={{ xs: 12, sm: 9 }}>
-          {/* My Files Section */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Storage sx={{ mr: 2, color: 'primary.main' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                My Files
-              </Typography>
-            </Box>
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="text.secondary">
-                Maximum file size: 1 MB
-              </Typography>
-
-              {/* AI Processing Toggle */}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={aiModeEnabled}
-                    onChange={(e) => {
-                      const enabled = e.target.checked;
-                      logger.debug('[HomePage] AI toggle changed to', enabled);
-                      setAiModeEnabled(enabled);
-                      localStorage.setItem('aiModeEnabled', JSON.stringify(enabled));
-                    }}
-                    color="primary"
-                    size="small"
-                  />
-                }
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {aiModeEnabled ? (
-                      <Psychology sx={{ fontSize: 16, color: 'primary.main' }} />
-                    ) : (
-                      <SmartToy sx={{ fontSize: 16, color: 'text.secondary' }} />
-                    )}
-                    <Typography variant="caption" color="text.secondary">
-                      AI {aiModeEnabled ? 'On' : 'Off'}
-                    </Typography>
-                  </Box>
-                }
-                sx={{ m: 0 }}
-              />
-            </Box>
-            <Grid container spacing={2}>
-              {renderRootItems()}
-              {(!rootData || !rootData.children || Object.keys(rootData.children).length === 0) && (
-                <Grid item xs={12}>
-                  <Box
-                    sx={{
-                      textAlign: 'center',
-                      py: 6,
-                      color: 'text.secondary',
-                    }}
-                  >
-                    <Storage sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                      No files yet
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      Start by creating a folder or uploading a file
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
+      <Box sx={{ display: 'grid', gap: 2.5 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' },
+            gap: 2.5,
+            alignItems: 'start',
+          }}
+        >
+          <Box sx={{ display: 'grid', gap: 2.5, minWidth: 0 }}>
+            <Paper sx={sectionSx}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  justifyContent: 'space-between',
+                  gap: 1.5,
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                  <Storage sx={{ color: 'primary.main' }} />
+                  <Box>
+                    <Typography variant="h6">My Files</Typography>
+                    <Typography variant="body2" color="text.secondary">
                       Maximum file size: 1 MB
                     </Typography>
                   </Box>
-                </Grid>
-              )}
-            </Grid>
-          </Paper>
+                </Box>
 
-          {/* Shared with Me Section */}
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Share sx={{ mr: 2, color: 'secondary.main' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Shared with Me
-              </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={aiModeEnabled}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          logger.debug('[HomePage] AI toggle changed to', enabled);
+                          setAiModeEnabled(enabled);
+                          localStorage.setItem('aiModeEnabled', JSON.stringify(enabled));
+                        }}
+                        color="primary"
+                        size="small"
+                      />
+                    }
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <AIAssistantIcon size={16} sx={{ opacity: aiModeEnabled ? 1 : 0.46 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          AI {aiModeEnabled ? 'On' : 'Off'}
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ m: 0 }}
+                  />
+                  <Button
+                    variant="contained"
+                    startIcon={<Upload />}
+                    disabled={uploading}
+                    onClick={handleUploadFile}
+                  >
+                    Upload
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<CreateNewFolder />}
+                    onClick={handleCreateFolder}
+                  >
+                    New Folder
+                  </Button>
+                </Box>
+              </Box>
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fit, minmax(220px, 1fr))' },
+                  gap: 1.5,
+                  alignItems: 'stretch',
+                }}
+              >
+                {renderRootItems()}
+                {(!rootData || !rootData.children || Object.keys(rootData.children).length === 0) && (
+                  <Box
+                    sx={{
+                      gridColumn: '1 / -1',
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      p: { xs: 3, md: 4 },
+                      color: 'text.secondary',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Storage sx={{ fontSize: 42, mb: 1, opacity: 0.55 }} />
+                    <Typography variant="h6" sx={{ mb: 0.5 }}>
+                      No files yet
+                    </Typography>
+                    <Typography variant="body2">
+                      Upload a file or create a folder to start.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+
+            <Paper sx={sectionSx}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
+                <Share sx={{ color: 'secondary.main' }} />
+                <Box>
+                  <Typography variant="h6">Shared with Me</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Files and folders shared by other users.
+                  </Typography>
+                </Box>
+              </Box>
+              {renderSharedItems()}
+            </Paper>
+          </Box>
+
+          <Paper
+            sx={{
+              ...sectionSx,
+              position: { lg: 'sticky' },
+              top: { lg: 88 },
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              At a glance
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              <Box sx={statCardSx('primary.main')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Storage sx={{ color: 'primary.main' }} />
+                  <Box>
+                    <Typography variant="h4">{stats.totalFiles}</Typography>
+                    <Typography variant="body2" color="text.secondary">Total Files</Typography>
+                  </Box>
+                </Box>
+              </Box>
+              <Box sx={statCardSx('secondary.main')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Folder sx={{ color: 'secondary.main' }} />
+                  <Box>
+                    <Typography variant="h4">{stats.totalFolders}</Typography>
+                    <Typography variant="body2" color="text.secondary">Total Folders</Typography>
+                  </Box>
+                </Box>
+              </Box>
+              <Box sx={statCardSx('info.main')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <People sx={{ color: 'info.main' }} />
+                  <Box>
+                    <Typography variant="h4">{stats.sharedItems}</Typography>
+                    <Typography variant="body2" color="text.secondary">Shared Items</Typography>
+                  </Box>
+                </Box>
+              </Box>
             </Box>
-            {renderSharedItems()}
           </Paper>
-        </Grid>
-
-        {/* Right Side - Stats Cards */}
-        <Grid item size={{ xs: 12, sm: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Paper
-                sx={{
-                  p: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                }}
-              >
-                <Storage sx={{ fontSize: 40 }} />
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {stats.totalFiles}
-                  </Typography>
-                  <Typography variant="body2">Total Files</Typography>
-                </Box>
-              </Paper>
-            </Grid>
-            <Grid item xs={12}>
-              <Paper
-                sx={{
-                  p: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  color: 'white',
-                }}
-              >
-                <Folder sx={{ fontSize: 40 }} />
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {stats.totalFolders}
-                  </Typography>
-                  <Typography variant="body2">Total Folders</Typography>
-                </Box>
-              </Paper>
-            </Grid>
-            <Grid item xs={12}>
-              <Paper
-                sx={{
-                  p: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                  color: 'white',
-                }}
-              >
-                <People sx={{ fontSize: 40 }} />
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {stats.sharedItems}
-                  </Typography>
-                  <Typography variant="body2">Shared Items</Typography>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
-
-      {/* Speed Dial for Actions */}
-      <SpeedDial
-        ariaLabel="File actions"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        icon={<SpeedDialIcon />}
-        onClose={() => setSpeedDialOpen(false)}
-        onOpen={() => setSpeedDialOpen(true)}
-        open={speedDialOpen}
-      >
-        {speedDialActions.map((action) => (
-          <SpeedDialAction
-            key={action.name}
-            icon={action.icon}
-            tooltipTitle={action.name}
-            onClick={action.onClick}
-          />
-        ))}
-      </SpeedDial>
+        </Box>
+      </Box>
 
       {/* Create Folder Dialog */}
       <FormDialog
@@ -813,7 +798,7 @@ const HomePage = () => {
             right: 24,
             minWidth: 300,
             bgcolor: 'background.paper',
-            borderRadius: 2,
+            borderRadius: 1,
             boxShadow: 3,
             p: 2,
             zIndex: 1300,
@@ -846,6 +831,7 @@ const HomePage = () => {
               alignItems: 'center',
               gap: 2,
               minWidth: 288,
+              borderRadius: 1,
               bgcolor: snackbar.severity === 'error' ? 'error.main' :
                        snackbar.severity === 'success' ? 'success.main' :
                        snackbar.severity === 'warning' ? 'warning.main' : 'info.main',
@@ -870,6 +856,8 @@ const HomePage = () => {
               left: menuAnchorEl?.getBoundingClientRect().left,
               zIndex: 1300,
               minWidth: 200,
+              borderRadius: 1,
+              overflow: 'hidden',
             }}
           >
             {selectedItem && (

@@ -9,6 +9,7 @@ import FileExplorer from './components/FileExplorer';
 import ChatInterface from './components/ChatInterface';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
+import AIChatSidebar from './components/AIChatSidebar';
 import { authAPI } from './utils/api';
 
 // Auth Context
@@ -65,29 +66,74 @@ function App() {
     palette: {
       mode: darkMode ? 'dark' : 'light',
       primary: {
-        main: '#1976d2',
-        light: '#42a5f5',
-        dark: '#1565c0',
+        main: darkMode ? '#8ecdf7' : '#246fa7',
+        light: darkMode ? '#c4e8ff' : '#5e9dca',
+        dark: darkMode ? '#5aa9de' : '#17547f',
       },
       secondary: {
-        main: '#dc004e',
+        main: darkMode ? '#e8ba75' : '#a87532',
+        light: darkMode ? '#f3d7aa' : '#cb9651',
+        dark: darkMode ? '#b78845' : '#744f20',
+      },
+      success: {
+        main: darkMode ? '#7fc297' : '#2f7a55',
+      },
+      warning: {
+        main: darkMode ? '#e9bf6b' : '#b47c24',
+      },
+      error: {
+        main: darkMode ? '#ef8f83' : '#b94d43',
+      },
+      info: {
+        main: darkMode ? '#4f91c7' : '#2a6f9e',
       },
       background: {
-        default: darkMode ? '#121212' : '#f5f5f5',
-        paper: darkMode ? '#1e1e1e' : '#ffffff',
+        default: darkMode ? '#111417' : '#f5f7fa',
+        paper: darkMode ? '#191d21' : '#ffffff',
+      },
+      text: {
+        primary: darkMode ? '#eff3f7' : '#17202a',
+        secondary: darkMode ? '#aab7c3' : '#667585',
+      },
+      divider: darkMode ? 'rgba(210, 222, 232, 0.13)' : 'rgba(27, 43, 60, 0.11)',
+      action: {
+        hover: darkMode ? 'rgba(142, 205, 247, 0.08)' : 'rgba(36, 111, 167, 0.06)',
+        selected: darkMode ? 'rgba(142, 205, 247, 0.13)' : 'rgba(36, 111, 167, 0.09)',
       },
     },
     typography: {
-      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+      fontFamily: '"Aptos", "Segoe UI", "Helvetica Neue", sans-serif',
+      h1: {
+        fontWeight: 800,
+        letterSpacing: 0,
+      },
+      h2: {
+        fontWeight: 800,
+        letterSpacing: 0,
+      },
+      h3: {
+        fontWeight: 800,
+        letterSpacing: 0,
+      },
       h4: {
-        fontWeight: 600,
+        fontWeight: 800,
+        letterSpacing: 0,
+      },
+      h5: {
+        fontWeight: 800,
+        letterSpacing: 0,
       },
       h6: {
-        fontWeight: 500,
+        fontWeight: 800,
+        letterSpacing: 0,
+      },
+      button: {
+        fontWeight: 700,
+        letterSpacing: 0,
       },
     },
     shape: {
-      borderRadius: 12,
+      borderRadius: 8,
     },
     components: {
       MuiButton: {
@@ -95,15 +141,79 @@ function App() {
           root: {
             textTransform: 'none',
             borderRadius: 8,
+            boxShadow: 'none',
+            paddingInline: 18,
+            minHeight: 40,
+            '&:hover': {
+              boxShadow: 'none',
+            },
+          },
+          containedPrimary: {
+            background: darkMode ? '#8ecdf7' : '#246fa7',
+            color: darkMode ? '#111417' : '#ffffff',
+            '&:hover': {
+              background: darkMode ? '#c4e8ff' : '#17547f',
+            },
+          },
+          outlinedPrimary: {
+            borderColor: darkMode ? 'rgba(142, 205, 247, 0.32)' : 'rgba(36, 111, 167, 0.24)',
+            color: darkMode ? '#d7ecff' : '#246fa7',
+            '&:hover': {
+              borderColor: darkMode ? '#8ecdf7' : '#246fa7',
+              background: darkMode ? 'rgba(142, 205, 247, 0.08)' : 'rgba(36, 111, 167, 0.06)',
+            },
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            border: darkMode ? '1px solid rgba(210, 222, 232, 0.12)' : '1px solid rgba(27, 43, 60, 0.09)',
+            boxShadow: darkMode
+              ? '0 18px 42px rgba(0, 0, 0, 0.26)'
+              : '0 16px 36px rgba(21, 37, 52, 0.06)',
           },
         },
       },
       MuiCard: {
         styleOverrides: {
           root: {
-            boxShadow: darkMode 
-              ? '0 4px 20px rgba(0,0,0,0.3)' 
-              : '0 4px 20px rgba(0,0,0,0.1)',
+            borderRadius: 8,
+            border: darkMode ? '1px solid rgba(210, 222, 232, 0.12)' : '1px solid rgba(27, 43, 60, 0.09)',
+            boxShadow: darkMode
+              ? '0 12px 30px rgba(0, 0, 0, 0.22)'
+              : '0 12px 28px rgba(21, 37, 52, 0.055)',
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.035)' : '#ffffff',
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: 6,
+            fontWeight: 700,
+          },
+        },
+      },
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            boxShadow: 'none',
+          },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 8,
           },
         },
       },
@@ -176,40 +286,68 @@ function App() {
     );
   }
 
+  const appRoutes = (
+    <Routes>
+      <Route 
+        path="/login" 
+        element={!user ? <LoginPage /> : <Navigate to="/home" />} 
+      />
+      <Route 
+        path="/register" 
+        element={!user ? <RegisterPage /> : <Navigate to="/home" />} 
+      />
+      <Route 
+        path="/home" 
+        element={user ? <HomePage /> : <Navigate to="/login" />} 
+      />
+      <Route 
+        path="/explorer/*" 
+        element={user ? <FileExplorer /> : <Navigate to="/login" />} 
+      />
+      <Route
+        path="/shared"
+        element={<Navigate to={user ? "/home" : "/login"} replace />}
+      />
+      <Route
+        path="/shared/*"
+        element={user ? <FileExplorer /> : <Navigate to="/login" />}
+      />
+      <Route 
+        path="/chat" 
+        element={user ? <ChatInterface /> : <Navigate to="/login" />} 
+      />
+      <Route 
+        path="/" 
+        element={<Navigate to={user ? "/home" : "/login"} />} 
+      />
+    </Routes>
+  );
+
   return (
     <ErrorBoundary>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthContext.Provider value={authValue}>
           <ThemeContext.Provider value={themeValue}>
-            <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+            <Box
+              className="res-share-app"
+              sx={{
+                minHeight: '100vh',
+                backgroundColor: 'background.default',
+                color: 'text.primary',
+              }}
+            >
               {user && <Navbar />}
-              <Routes>
-              <Route 
-                path="/login" 
-                element={!user ? <LoginPage /> : <Navigate to="/home" />} 
-              />
-              <Route 
-                path="/register" 
-                element={!user ? <RegisterPage /> : <Navigate to="/home" />} 
-              />
-              <Route 
-                path="/home" 
-                element={user ? <HomePage /> : <Navigate to="/login" />} 
-              />
-              <Route 
-                path="/explorer/*" 
-                element={user ? <FileExplorer /> : <Navigate to="/login" />} 
-              />
-              <Route 
-                path="/chat" 
-                element={user ? <ChatInterface /> : <Navigate to="/login" />} 
-              />
-              <Route 
-                path="/" 
-                element={<Navigate to={user ? "/home" : "/login"} />} 
-              />
-            </Routes>
+              {user ? (
+                <Box sx={{ display: 'flex', alignItems: 'stretch', minHeight: { xs: 'calc(100dvh - 64px)', md: 'calc(100vh - 68px)' } }}>
+                  <AIChatSidebar />
+                  <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
+                    {appRoutes}
+                  </Box>
+                </Box>
+              ) : (
+                appRoutes
+              )}
           </Box>
         </ThemeContext.Provider>
       </AuthContext.Provider>

@@ -23,7 +23,6 @@ import {
   Folder,
   Logout,
   Delete,
-  SmartToy,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useThemeMode } from '../App';
@@ -107,12 +106,28 @@ const Navbar = () => {
     navigate('/home');
   }, [navigate]);
 
+  const isExplorerRoute = location.pathname.startsWith('/explorer') || location.pathname.startsWith('/shared');
+
   const navButtonStyle = (active) => ({
-    my: 2,
-    color: active ? theme.palette.primary.main : theme.palette.text.primary,
+    my: 1,
+    mx: 0.25,
+    px: 1.5,
+    py: 0.8,
+    color: active ? 'primary.main' : 'text.secondary',
+    backgroundColor: active ? 'action.selected' : 'transparent',
+    border: active ? '1px solid' : '1px solid transparent',
+    borderColor: active ? 'divider' : 'transparent',
+    borderRadius: 1,
     display: 'flex',
     alignItems: 'center',
-    fontWeight: active ? 600 : 400,
+    fontWeight: 800,
+    '&:hover': {
+      backgroundColor: 'action.hover',
+      color: 'primary.main',
+    },
+    '& .MuiButton-startIcon .MuiSvgIcon-root': {
+      color: active ? 'primary.main' : 'text.secondary',
+    },
   });
 
   return (
@@ -123,18 +138,30 @@ const Navbar = () => {
       aria-label="Main navigation"
       sx={{
         backgroundColor: 'background.paper',
-        borderBottom: 1,
+        color: 'text.primary',
+        borderBottom: '1px solid',
         borderColor: 'divider',
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <img
-            src="/logo192.png"
-            alt="ResShare Logo"
-            style={{
-              width: '32px',
-              height: '32px',
+      <Toolbar
+        sx={{
+          justifyContent: 'space-between',
+          minHeight: { xs: 64, md: 68 },
+          px: { xs: 2, md: 3, lg: 4 },
+          width: '100%',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 38,
+              height: 38,
+              display: 'grid',
+              placeItems: 'center',
+              borderRadius: 1,
+              backgroundColor: 'background.default',
+              border: '1px solid',
+              borderColor: 'divider',
               cursor: 'pointer',
             }}
             onClick={handleHomeClick}
@@ -146,12 +173,22 @@ const Navbar = () => {
                 handleHomeClick();
               }
             }}
-          />
+          >
+            <img
+              src="/logo192.png"
+              alt="ResShare Logo"
+              style={{
+                width: '28px',
+                height: '28px',
+              }}
+            />
+          </Box>
           <Typography
             variant="h6"
             sx={{
-              color: theme.palette.text.primary,
-              fontWeight: 600,
+              color: 'text.primary',
+              fontWeight: 800,
+              letterSpacing: 0,
               cursor: 'pointer',
             }}
             onClick={handleHomeClick}
@@ -164,37 +201,28 @@ const Navbar = () => {
               }
             }}
           >
-            ResShare Drive
+            ResShare
           </Typography>
         </Box>
 
-        <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+        <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, ml: 4 }}>
           <Button
             onClick={() => navigate('/home')}
             sx={navButtonStyle(location.pathname === '/home')}
-            startIcon={<Home sx={{ color: theme.palette.text.primary }} />}
+            startIcon={<Home />}
             aria-label="Navigate to Home"
             aria-current={location.pathname === '/home' ? 'page' : undefined}
           >
-            Home
+            Drive
           </Button>
           <Button
             onClick={() => navigate('/explorer')}
-            sx={navButtonStyle(location.pathname.startsWith('/explorer'))}
-            startIcon={<Folder sx={{ color: theme.palette.text.primary }} />}
+            sx={navButtonStyle(isExplorerRoute)}
+            startIcon={<Folder />}
             aria-label="Navigate to Explorer"
-            aria-current={location.pathname.startsWith('/explorer') ? 'page' : undefined}
+            aria-current={isExplorerRoute ? 'page' : undefined}
           >
             Explorer
-          </Button>
-          <Button
-            onClick={() => navigate('/chat')}
-            sx={navButtonStyle(location.pathname === '/chat')}
-            startIcon={<SmartToy sx={{ color: theme.palette.text.primary }} />}
-            aria-label="Navigate to AI Chat"
-            aria-current={location.pathname === '/chat' ? 'page' : undefined}
-          >
-            AI Chat
           </Button>
         </Box>
 
@@ -204,7 +232,8 @@ const Navbar = () => {
               onClick={handleHomeClick}
               aria-label="Go to Home"
               sx={{ 
-                color: location.pathname === '/home' ? theme.palette.primary.main : theme.palette.action.active,
+                display: { xs: 'inline-flex', md: 'none' },
+                color: location.pathname === '/home' ? 'primary.main' : 'text.secondary',
                 '&:hover': { backgroundColor: 'action.hover' },
               }}
             >
@@ -217,8 +246,8 @@ const Navbar = () => {
               onClick={toggleTheme}
               aria-label={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               sx={{ 
-                color: theme.palette.action.active,
-                '&:hover': { backgroundColor: 'action.hover' },
+                color: 'text.secondary',
+                '&:hover': { backgroundColor: 'action.hover', color: 'primary.main' },
               }}
             >
               {darkMode ? <Brightness7 fontSize="medium" /> : <Brightness4 fontSize="medium" />}
@@ -231,7 +260,7 @@ const Navbar = () => {
               aria-label="Account settings"
               sx={{ 
                 ml: 1,
-                color: theme.palette.action.active,
+                color: 'text.secondary',
                 '&:hover': { backgroundColor: 'action.hover' },
               }}
             >
@@ -241,7 +270,8 @@ const Navbar = () => {
                   height: 32, 
                   bgcolor: 'primary.main',
                   fontSize: '0.875rem',
-                  color: theme.palette.primary.contrastText,
+                  color: 'background.paper',
+                  fontWeight: 800,
                 }}
               >
                 {user?.charAt(0).toUpperCase()}

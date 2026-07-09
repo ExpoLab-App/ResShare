@@ -22,13 +22,11 @@ import {
 } from '@mui/material';
 import {
   Send,
-  SmartToy,
   Person,
   Description,
   ExpandMore,
   ExpandLess,
   Info,
-  AutoAwesome,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { chatAPI } from '../utils/api';
@@ -36,6 +34,7 @@ import { useAuth } from '../App';
 import { logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/errorHandler';
 import { escapeHtml } from '../utils/sanitization';
+import AIAssistantIcon from './AIAssistantIcon';
 
 const MessageBubble = React.memo(({ message, theme }) => {
   const isUser = message.type === 'user';
@@ -43,7 +42,7 @@ const MessageBubble = React.memo(({ message, theme }) => {
 
   const userBg = theme.palette.primary.main;
   const userText = theme.palette.primary.contrastText;
-  const botBg = theme.palette.background.paper;
+  const botBg = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.045)' : theme.palette.background.paper;
   const botText = theme.palette.text.primary;
   const errorBg = theme.palette.error.light;
   const errorText = theme.palette.error.contrastText || theme.palette.text.primary;
@@ -70,16 +69,20 @@ const MessageBubble = React.memo(({ message, theme }) => {
     >
       <Card
         sx={{
-          maxWidth: '70%',
+          maxWidth: { xs: '88%', md: '72%' },
+          borderRadius: 2,
           backgroundColor,
           color,
-          boxShadow: 2,
+          boxShadow: 'none',
+          border: isUser
+            ? '1px solid transparent'
+            : `1px solid ${theme.palette.divider}`,
         }}
       >
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            {isUser ? <Person sx={{ mr: 1 }} /> : <SmartToy sx={{ mr: 1 }} />}
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+            {isUser ? <Person sx={{ mr: 1 }} /> : <AIAssistantIcon size={24} sx={{ mr: 1 }} />}
+            <Typography variant="body2" sx={{ fontWeight: 800 }}>
               {isUser ? 'You' : 'AI Assistant'}
             </Typography>
           </Box>
@@ -150,7 +153,7 @@ MessageBubble.propTypes = {
   theme: PropTypes.object.isRequired
 };
 
-const ChatInterface = () => {
+const ChatInterface = ({ embedded = false }) => {
   const { user } = useAuth();
   const theme = useTheme();
   const [messages, setMessages] = useState([]);
@@ -280,11 +283,18 @@ const ChatInterface = () => {
   }, [stats]);
 
   const StatsPanel = () => (
-    <Card sx={{ mb: 2 }}>
+    <Card
+      sx={{
+        mb: 2,
+        boxShadow: 'none',
+        borderRadius: 2,
+        backgroundColor: 'background.default',
+      }}
+    >
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
              onClick={() => setShowStats(!showStats)}>
-          <AutoAwesome sx={{ mr: 1, color: 'primary.main' }} />
+          <AIAssistantIcon size={26} sx={{ mr: 1 }} />
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Knowledge Base
           </Typography>
@@ -300,90 +310,143 @@ const ChatInterface = () => {
     </Card>
   );
 
-  return (
-    <Container maxWidth="md" sx={{ py: 3 }}>
-      <Paper sx={{ height: '80vh', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center' }}>
-            <SmartToy sx={{ mr: 1, color: 'primary.main' }} />
-            AI Document Assistant
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Ask questions about your uploaded documents
-          </Typography>
-        </Box>
+  const chatPanel = (
+    <Paper
+      sx={{
+        height: embedded ? '100%' : { xs: 'calc(100vh - 112px)', md: 'calc(100vh - 128px)' },
+        minHeight: embedded ? 0 : 560,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        borderRadius: embedded ? 0 : 2,
+        border: embedded ? 0 : undefined,
+        boxShadow: embedded ? 'none' : undefined,
+        backgroundColor: 'background.paper',
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ p: embedded ? 2 : { xs: 2, md: 2.5 }, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant={embedded ? 'h6' : 'h5'} sx={{ display: 'flex', alignItems: 'center' }}>
+          <AIAssistantIcon size={30} sx={{ mr: 1 }} />
+          AI Document Assistant
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Ask questions about your uploaded documents
+        </Typography>
+      </Box>
 
-        {/* Stats Panel */}
-        <Box sx={{ p: 2 }}>
-          <StatsPanel />
-        </Box>
+      {/* Stats Panel */}
+      <Box sx={{ p: embedded ? 2 : { xs: 2, md: 2.5 }, pb: 0 }}>
+        <StatsPanel />
+      </Box>
 
-        {/* Messages */}
-        <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-          {messages.map(message => (
-            <MessageBubble key={message.id} message={message} theme={theme} />
-          ))}
+      {/* Messages */}
+      <Box sx={{ flexGrow: 1, overflow: 'auto', p: embedded ? 2 : { xs: 2, md: 2.5 } }}>
+        {messages.map(message => (
+          <MessageBubble key={message.id} message={message} theme={theme} />
+        ))}
 
-          {isLoading && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
-              <Card sx={{ backgroundColor: 'grey.100' }}>
-                <CardContent sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-                  <CircularProgress size={20} sx={{ mr: 2 }} />
-                  <Typography variant="body2">AI is thinking...</Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </Box>
-
-        {/* Error Display */}
-        {error && (
-          <Box sx={{ p: 2 }}>
-            <Alert severity="error" onClose={() => setError('')}>
-              {error}
-            </Alert>
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 2 }}>
+            <Card
+              sx={{
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : theme.palette.background.paper,
+                boxShadow: 'none',
+                border: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <CardContent sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+                <CircularProgress size={20} sx={{ mr: 2 }} />
+                <Typography variant="body2">AI is thinking...</Typography>
+              </CardContent>
+            </Card>
           </Box>
         )}
+        
+        <div ref={messagesEndRef} />
+      </Box>
 
-        {/* Input */}
-        <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              fullWidth
-              multiline
-              maxRows={3}
-              placeholder="Ask a question about your documents..."
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-              variant="outlined"
-              size="small"
-            />
-            <Tooltip title="Send message">
-              <IconButton
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isLoading}
-                color="primary"
-                sx={{ alignSelf: 'flex-end' }}
-              >
-                <Send />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Tip: Upload PDF, DOCX, or TXT files to expand my knowledge base!
-          </Typography>
+      {/* Error Display */}
+      {error && (
+        <Box sx={{ p: 2 }}>
+          <Alert severity="error" onClose={() => setError('')}>
+            {error}
+          </Alert>
         </Box>
-      </Paper>
+      )}
+
+      {/* Input */}
+      <Box sx={{ p: embedded ? 2 : { xs: 2, md: 2.5 }, borderTop: 1, borderColor: 'divider' }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <TextField
+            fullWidth
+            multiline
+            maxRows={3}
+            placeholder="Ask a question about your documents..."
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+            variant="outlined"
+            size="small"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                alignItems: 'flex-end',
+              },
+            }}
+          />
+          <Tooltip title="Send message">
+            <IconButton
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              color="primary"
+              sx={{
+                alignSelf: 'flex-end',
+                width: 42,
+                height: 42,
+                borderRadius: 1,
+                bgcolor: 'primary.main',
+                color: 'background.paper',
+                '&:hover': { bgcolor: 'primary.dark' },
+                '&.Mui-disabled': {
+                  bgcolor: 'action.disabledBackground',
+                },
+              }}
+            >
+              <Send />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        
+      </Box>
+    </Paper>
+  );
+
+  if (embedded) {
+    return (
+      <Box sx={{ height: '100%', minHeight: 0 }}>
+        {chatPanel}
+      </Box>
+    );
+  }
+
+  return (
+    <Container
+      maxWidth={false}
+      sx={{
+        py: { xs: 2, md: 3 },
+        px: { xs: 2, md: 3 },
+        maxWidth: 1120,
+        mx: 'auto',
+      }}
+    >
+      {chatPanel}
     </Container>
   );
 };
 
-ChatInterface.propTypes = {};
+ChatInterface.propTypes = {
+  embedded: PropTypes.bool,
+};
 
 export default ChatInterface; 
