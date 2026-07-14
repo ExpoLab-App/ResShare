@@ -82,7 +82,7 @@ npm start
 ```
 
 The application will be available at:
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:5997
 - Backend API: http://localhost:5000
 
 ## Using the AI Chatbot

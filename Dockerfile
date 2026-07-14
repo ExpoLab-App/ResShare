@@ -44,13 +44,6 @@ RUN conda create --name reschat_venv python=3.10 -y
 # Make RUN commands use the conda environment
 SHELL ["conda", "run", "-n", "reschat_venv", "/bin/bash", "-c"]
 
-# Install Bazelisk
-RUN wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 -O /usr/local/bin/bazel \
-    && chmod +x /usr/local/bin/bazel
-
-# Set Bazel version
-ENV USE_BAZEL_VERSION=7.5.0
-
 # Install IPFS
 RUN wget https://dist.ipfs.tech/kubo/v0.29.0/kubo_v0.29.0_linux-amd64.tar.gz \
     && tar -xvzf kubo_v0.29.0_linux-amd64.tar.gz \
@@ -77,13 +70,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy the entire application
 COPY . /app/
 
-# Build with Bazel (commented out since using API instead of pybind)
-# WORKDIR /app/backend/bazel
-# RUN bazel build //kv_service:pybind_kv.so
-
-# Copy the built .so file to backend directory (commented out)
-# RUN cp -f bazel-bin/kv_service/pybind_kv.so /app/backend/
-
 # Back to app directory
 WORKDIR /app
 
@@ -91,8 +77,7 @@ WORKDIR /app
 RUN mkdir -p /root/.ipfs \
     && mkdir -p /root/.ipfs-cluster
 
-# Copy entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
+# Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
 # Expose Flask port and IPFS ports

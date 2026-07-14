@@ -1,7 +1,6 @@
 import os
 import requests
 import json
-from typing import Union
 
 from dotenv import load_dotenv
 load_dotenv()

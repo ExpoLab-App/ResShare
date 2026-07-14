@@ -31,8 +31,9 @@ This guide covers deploying the ResShare backend using Docker, both locally and 
 ### Step 1: Prepare Environment
 
 1. **Clone or navigate to your project directory:**
-   ```bash
-   cd /home/devang/Projects/ResShareDeployable
+   ```
+   git clone https://github.com/ExpoLab-App/ResShare.git
+   cd ResShare
    ```
 
 2. **Create environment file:**
@@ -59,7 +60,6 @@ docker build -t resshare-backend:latest . --no-cache
 
 This will take 10-15 minutes on first build. It will:
 - Install all system dependencies
-- Install Bazel and build C++ components
 - Install IPFS and IPFS Cluster
 - Install Python dependencies
 - Set up the application
@@ -246,15 +246,15 @@ docker compose version
 ```bash
 # On EC2 instance
 cd ~
-git clone https://github.com/your-username/ResShareDeployable.git
-cd ResShareDeployable
+git clone https://github.com/ExpoLab-App/ResShare.git
+cd ResShare
 ```
 
 **Option B: Using SCP from local machine**
 
 ```bash
 # On your local machine
-cd /home/devang/Projects/ResShareDeployable
+cd ResShare
 
 # Create tarball (exclude unnecessary files)
 tar -czf resshare.tar.gz \
@@ -271,7 +271,7 @@ scp -i your-key.pem resshare.tar.gz ubuntu@your-ec2-public-ip:~/
 ssh -i your-key.pem ubuntu@your-ec2-public-ip
 cd ~
 tar -xzf resshare.tar.gz -C ResShareDeployable/
-cd ResShareDeployable
+cd ResShare
 ```
 
 ### Step 5: Configure Environment on EC2
@@ -329,7 +329,7 @@ docker compose logs -f
    ```bash
    curl -X POST http://your-ec2-public-ip:5000/signup \
      -H "Content-Type: application/json" \
-     -d '{"username":"testuser","password":"testpass123"}'
+     -d '{"username":"testuser","password":"Pass@123"}'
    ```
 
 ### Step 8: Configure Frontend to Use EC2 Backend
@@ -418,18 +418,6 @@ docker exec -it resshare-backend bash
 ipfs id
 ipfs-cluster-service --version
 ```
-
-### Build fails
-
-**Check Bazel build:**
-```bash
-docker build --no-cache -t resshare-backend:latest .
-```
-
-**If Bazel fails:**
-- Increase Docker memory limit (Docker Desktop: Settings → Resources)
-- Try building on a more powerful machine or EC2 instance
-
 ### Application not accessible from outside
 
 **Check security group:**
@@ -544,7 +532,7 @@ sudo systemctl start resshare.service
 ### Update application
 
 ```bash
-cd ~/ResShareDeployable
+cd ResShare
 git pull origin main
 docker compose down
 docker build -t resshare-backend:latest .
@@ -575,5 +563,5 @@ docker run --rm \
 
 For issues and questions:
 - Check logs: `docker compose logs`
-- GitHub Issues: [Your repo URL]
-- Documentation: [Your docs URL]
+- GitHub Issues: [ExpoLab-App/ResShare](https://github.com/ExpoLab-App/ResShare/issues)
+- Documentation: [ResShare Docs](./)
