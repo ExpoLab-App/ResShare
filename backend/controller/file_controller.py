@@ -174,7 +174,7 @@ def register_file_routes(app, logger):
             except Exception as e:
                 route_logger.error(f"RAG processing error for {filename}: {e}")
                 rag_success = False
-                file_obj.mark_rag_failed(str(e), "gemini-embedding-001", 1)
+                file_obj.mark_rag_failed(str(e), "gemini-embedding-001")
 
             set_kv(username + " ROOT", root.to_json())
         elif skip_ai_processing:
