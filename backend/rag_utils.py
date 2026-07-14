@@ -183,10 +183,10 @@ class RAGManager:
                 'metadata': {
                     **chunk.metadata,
                     'chunk_index': i,
-                    'chunk_id': str(uuid5(
+                    'chunk_id': str(uuid5( # UUIDv5 gives stable, idempotent IDs:same document + same chunk index → same UUID
                         NAMESPACE_URL,
                         (
-                            f"reshare:{metadata['document_id']}:"
+                            f"reshare:{metadata['document_id']}:{i}"
                         ),
                     ))
                 }
