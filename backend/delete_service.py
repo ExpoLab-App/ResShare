@@ -3,6 +3,8 @@ from backend.RSDB_kv_service import get_kv, set_kv
 from backend.error import ErrorCode
 from backend.node import Node
 from backend.share_manager import ShareManager
+from backend.controller.helpers import collect_indexed_document_ids
+from backend.rag_utils import get_rag_manager
 
 
 def _load_root(username: str):
@@ -41,6 +43,11 @@ def delete_node(data):
 
         if node_name not in parent_node.children:
             return jsonify({'message': ErrorCode.NODE_NOT_FOUND.name}), 404
+
+        target_node = parent_node.children[node_name]
+        document_ids = collect_indexed_document_ids(target_node)
+        if document_ids and not get_rag_manager().delete_documents(username, document_ids):
+            return jsonify({'message': 'RAG_DELETE_FAILED'}), 503
 
         del parent_node.children[node_name]
 

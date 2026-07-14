@@ -38,8 +38,8 @@ ENV PATH="/opt/conda/bin:${PATH}"
 RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main \
     && conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
-# Create conda environment with Python 3.8
-RUN conda create --name reschat_venv python=3.8 -y
+# Create conda environment with a Python version supported by qdrant-client
+RUN conda create --name reschat_venv python=3.10 -y
 
 # Make RUN commands use the conda environment
 SHELL ["conda", "run", "-n", "reschat_venv", "/bin/bash", "-c"]
@@ -88,8 +88,7 @@ COPY . /app/
 WORKDIR /app
 
 # Create necessary directories
-RUN mkdir -p /app/backend/vector_db \
-    && mkdir -p /root/.ipfs \
+RUN mkdir -p /root/.ipfs \
     && mkdir -p /root/.ipfs-cluster
 
 # Copy entrypoint script
@@ -109,4 +108,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
 
 # Run the entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
-

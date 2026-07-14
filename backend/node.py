@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 from backend.error import ErrorCode
 from backend.file import File
@@ -59,12 +58,7 @@ class Node:
         if self.is_folder:
             node_dict["children"] = {name: child.to_dict() for name, child in self.children.items()}
         else:
-            node_dict["file_obj"] = {
-                "cid": self.file_obj.cid,
-                "size": self.file_obj.size,
-                "filename": self.file_obj.filename,
-                "creation_date": self.file_obj.creation_date.isoformat()
-            }
+            node_dict["file_obj"] = self.file_obj.to_dict()
         return node_dict
 
     def to_json(self):
@@ -78,16 +72,10 @@ class Node:
                 node.add_child(cls.from_dict(child_data))
         else:
             file_data = data["file_obj"]
-            file_obj = File(
-                cid=file_data["cid"],
-                size=file_data["size"],
-                filename=file_data["filename"],
-                creation_date=datetime.fromisoformat(file_data["creation_date"])
-            )
+            file_obj = File.from_dict(file_data)
             node = cls(data["name"], is_folder=False, file_obj=file_obj)
         return node
 
     @classmethod
     def from_json(cls, json_str):
         return cls.from_dict(json.loads(json_str))
-

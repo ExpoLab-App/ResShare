@@ -6,7 +6,13 @@ from flask import jsonify, request, session
 from backend.RSDB_kv_service import get_kv, set_kv
 from backend.error import ErrorCode
 from backend.user_authentication_service import login, sign_up
-from backend.controller.helpers import get_resolved_share_list, login_required
+from backend.controller.helpers import (
+    collect_indexed_document_ids,
+    get_resolved_share_list,
+    get_root_node,
+    login_required,
+)
+from backend.rag_utils import get_rag_manager
 
 
 def register_auth_routes(app, logger):
@@ -62,6 +68,11 @@ def register_auth_routes(app, logger):
 
         if hashed_password != get_kv(username):
             return jsonify({'message': ErrorCode.INCORRECT_PASSWORD.name}), 401
+
+        root = get_root_node(username)
+        has_indexed_documents = bool(root and collect_indexed_document_ids(root))
+        if has_indexed_documents and not get_rag_manager().delete_user_data(username):
+            return jsonify({'message': 'RAG_DELETE_FAILED'}), 503
 
         set_kv(username, "\n")
         set_kv(username + " ROOT", "\n")

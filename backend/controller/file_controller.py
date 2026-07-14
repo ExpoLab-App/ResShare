@@ -1,5 +1,6 @@
-import zipfile
 from io import BytesIO
+import mimetypes
+import zipfile
 
 from flask import jsonify, request, send_file, session
 
@@ -105,7 +106,17 @@ def register_file_routes(app, logger):
         if target_node is None:
             return jsonify({'message': ErrorCode.NODE_NOT_FOUND.name}), 404
 
-        result = target_node.add_child(Node(filename, False, file_obj=File(cid, file_size, filename)))
+        supported_extensions = {'pdf', 'docx', 'txt'}
+        file_extension = filename.lower().split('.')[-1] if '.' in filename else ''
+        should_index = not skip_ai_processing and file_extension in supported_extensions
+        file_obj = File(
+            cid,
+            file_size,
+            filename,
+            mime_type=file.mimetype or mimetypes.guess_type(filename)[0],
+            rag_status="pending" if should_index else "skipped",
+        )
+        result = target_node.add_child(Node(filename, False, file_obj=file_obj))
 
         if result != ErrorCode.SUCCESS:
             return jsonify({'message': result.name}), 400
@@ -115,35 +126,74 @@ def register_file_routes(app, logger):
         rag_success = False
         rag_skipped = False
 
-        if not skip_ai_processing:
-            supported_extensions = {'pdf', 'docx', 'txt'}
-            file_extension = filename.lower().split('.')[-1] if '.' in filename else ''
+        if should_index:
+            try:
+                file_stream.seek(0)
+                file_content = file_stream.read()
+                normalized_parent = path.strip("/")
+                if normalized_parent == "root":
+                    normalized_parent = ""
+                elif normalized_parent.startswith("root/"):
+                    normalized_parent = normalized_parent[len("root/"):]
+                document_path = "/".join(
+                    part for part in (normalized_parent, filename) if part
+                )
 
-            if file_extension in supported_extensions:
-                try:
-                    file_stream.seek(0)
-                    file_content = file_stream.read()
+                rag_manager = get_rag_manager()
+                rag_result = rag_manager.process_file_for_rag(
+                    file_content,
+                    filename,
+                    username,
+                    cid,
+                    file_obj.document_id,
+                    document_path,
+                )
+                rag_success = rag_result.success
 
-                    rag_manager = get_rag_manager()
-                    rag_success = rag_manager.process_file_for_rag(file_content, filename, username, cid)
+                if rag_success:
+                    file_obj.mark_rag_ready(
+                        rag_result.chunk_count,
+                        rag_manager.embedding_model_name,
+                    )
+                    route_logger.info(
+                        "Successfully processed %s for RAG for user %s",
+                        filename,
+                        username,
+                    )
+                else:
+                    file_obj.mark_rag_failed(
+                        rag_result.error,
+                        rag_manager.embedding_model_name,
+                    )
+                    route_logger.warning(
+                        "Failed to process %s for RAG for user %s",
+                        filename,
+                        username,
+                    )
 
-                    if rag_success:
-                        route_logger.info(f"Successfully processed {filename} for RAG for user {username}")
-                    else:
-                        route_logger.warning(f"Failed to process {filename} for RAG for user {username}")
+            except Exception as e:
+                route_logger.error(f"RAG processing error for {filename}: {e}")
+                rag_success = False
+                file_obj.mark_rag_failed(str(e), "gemini-embedding-001", 1)
 
-                except Exception as e:
-                    route_logger.error(f"RAG processing error for {filename}: {e}")
-                    rag_success = False
+            set_kv(username + " ROOT", root.to_json())
+        elif skip_ai_processing:
+            rag_skipped = True
+            route_logger.info(
+                "RAG processing skipped for %s for user %s (AI mode disabled)",
+                filename,
+                username,
+            )
         else:
             rag_skipped = True
-            route_logger.info(f"RAG processing skipped for {filename} for user {username} (AI mode disabled)")
+            route_logger.info(f"RAG processing skipped for unsupported file {filename}")
 
         response_data = {
             'message': ErrorCode.SUCCESS.name,
             'root': root.to_json(),
             'rag_processed': rag_success,
             'rag_skipped': rag_skipped,
+            'rag_status': file_obj.rag_status,
             'skip_ai_processing': skip_ai_processing
         }
 

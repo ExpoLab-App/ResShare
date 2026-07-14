@@ -64,3 +64,31 @@ def collect_files_recursively(node, current_path=''):
                     files.append((child_path, child_node.file_obj))
 
     return files
+
+
+def collect_indexed_document_ids(node):
+    """Return ready RAG document IDs contained by a file or folder node."""
+    if not node.is_folder:
+        file_obj = node.file_obj
+        if file_obj and file_obj.rag_status == "ready":
+            return [file_obj.document_id]
+        return []
+
+    document_ids = []
+    for child_node in node.children.values():
+        document_ids.extend(collect_indexed_document_ids(child_node))
+    return document_ids
+
+
+def get_indexed_file_stats(root):
+    """Build knowledge-base statistics from authoritative file metadata."""
+    indexed_files = []
+    for path, file_obj in collect_files_recursively(root):
+        if file_obj.rag_status == "ready":
+            indexed_files.append((path, file_obj))
+
+    return {
+        "total_chunks": sum(file_obj.chunk_count for _, file_obj in indexed_files),
+        "total_files": len(indexed_files),
+        "files": sorted(file_obj.filename for _, file_obj in indexed_files),
+    }
