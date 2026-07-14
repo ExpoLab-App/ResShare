@@ -10,6 +10,10 @@ from backend.error import ErrorCode
 from backend.file import File
 from backend.ipfs import add_file_to_cluster, download_file_from_ipfs
 from backend.node import Node
+from backend.rag_persistence import (
+    RAGPersistenceResult,
+    persist_root_with_rag_rollback,
+)
 from backend.controller.helpers import (
     collect_files_recursively,
     get_root_node,
@@ -121,10 +125,9 @@ def register_file_routes(app, logger):
         if result != ErrorCode.SUCCESS:
             return jsonify({'message': result.name}), 400
 
-        set_kv(username + " ROOT", root.to_json())
-
         rag_success = False
         rag_skipped = False
+        rag_manager = None
 
         if should_index:
             try:
@@ -176,7 +179,6 @@ def register_file_routes(app, logger):
                 rag_success = False
                 file_obj.mark_rag_failed(str(e), "gemini-embedding-001")
 
-            set_kv(username + " ROOT", root.to_json())
         elif skip_ai_processing:
             rag_skipped = True
             route_logger.info(
@@ -187,6 +189,15 @@ def register_file_routes(app, logger):
         else:
             rag_skipped = True
             route_logger.info(f"RAG processing skipped for unsupported file {filename}")
+
+        persistence_result = persist_root_with_rag_rollback(
+            username,
+            root.to_json(),
+            rag_manager=rag_manager if rag_success else None,
+            indexed_document_id=file_obj.document_id if rag_success else None,
+        )
+        if persistence_result != RAGPersistenceResult.SUCCESS:
+            return jsonify({'message': persistence_result.value}), 503
 
         response_data = {
             'message': ErrorCode.SUCCESS.name,
