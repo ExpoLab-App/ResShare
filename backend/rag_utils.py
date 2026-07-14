@@ -1,22 +1,29 @@
 import os
-import json
-import pickle
-from typing import List, Dict
+from dataclasses import dataclass
 from io import BytesIO
 import logging
+from typing import Dict, List, Optional
+from uuid import NAMESPACE_URL, uuid5
 
+import numpy as np
 import PyPDF2
 from docx import Document
-import requests
-import faiss
-import numpy as np
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document as LangchainDocument
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from qdrant_client import QdrantClient, models
+import requests
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class RAGProcessResult:
+    success: bool
+    chunk_count: int = 0
+    error: Optional[str] = None
+
 
 class RAGManager:
     """
@@ -24,36 +31,72 @@ class RAGManager:
     Handles text extraction, chunking, embeddings, and vector search.
     """
     
-    def __init__(self, vector_db_path: str = "backend/vector_db", 
-                 embedding_model: str = "gemini-embedding-001", 
-                 embedding_dimension: int = 768):
+    COLLECTION_NAME = "document_chunks_v1"
+
+    def __init__(
+        self,
+        embedding_model: str = "gemini-embedding-001",
+        embedding_dimension: int = 768,
+        qdrant_client: Optional[QdrantClient] = None,
+    ):
         """
         Initialize RAG Manager
         
         Args:
-            vector_db_path: Path to store vector databases
             embedding_model: Gemini embedding model name
             embedding_dimension: Output embedding dimension (768, 1536, or 3072)
+            qdrant_client: Optional client override used by tests
         """
-        self.vector_db_path = vector_db_path
         self.embedding_model_name = embedding_model
         self.embedding_dimension = embedding_dimension
-        self.api_key = os.getenv('GOOGLE_API_KEY')
+        self.api_key = os.getenv("GOOGLE_API_KEY")
+        self._collection_ready = False
+        self.qdrant_client = qdrant_client or QdrantClient(
+            host=os.getenv("QDRANT_HOST", "localhost"),
+            port=int(os.getenv("QDRANT_PORT", "6333")),
+            timeout=10,
+        )
         
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,
             chunk_overlap=100,
             length_function=len,
-            separators=["\n\n", "\n", ". ", " ", ""]
+            separators=["\n\n", "\n", ". ", " ", ""],
         )
         
-        os.makedirs(self.vector_db_path, exist_ok=True)
-        
         self._setup_gemini_api()
+
+    def _ensure_collection(self) -> bool:
+        if self._collection_ready:
+            return True
+
+        try:
+            if not self.qdrant_client.collection_exists(self.COLLECTION_NAME):
+                self.qdrant_client.create_collection(
+                    collection_name=self.COLLECTION_NAME,
+                    vectors_config=models.VectorParams(
+                        size=self.embedding_dimension,
+                        distance=models.Distance.COSINE,
+                    ),
+                )
+
+            for field_name in ("user_id", "document_id"):
+                self.qdrant_client.create_payload_index(
+                    collection_name=self.COLLECTION_NAME,
+                    field_name=field_name,
+                    field_schema=models.PayloadSchemaType.KEYWORD,
+                    wait=True,
+                )
+
+            self._collection_ready = True
+            return True
+        except Exception as exc:
+            logger.error("Failed to initialize Qdrant collection: %s", exc)
+            return False
     
     def _setup_gemini_api(self):
         """Setup Gemini API configuration (no client needed for REST API)"""
-        api_key = os.getenv('GOOGLE_API_KEY')
+        api_key = self.api_key
         if not api_key:
             logger.warning("GOOGLE_API_KEY not found in environment variables")
         return api_key is not None
@@ -140,14 +183,23 @@ class RAGManager:
                 'metadata': {
                     **chunk.metadata,
                     'chunk_index': i,
-                    'chunk_id': f"{metadata.get('filename', 'unknown')}_{i}"
+                    'chunk_id': str(uuid5( # UUIDv5 gives stable, idempotent IDs:same document + same chunk index → same UUID
+                        NAMESPACE_URL,
+                        (
+                            f"reshare:{metadata['document_id']}:{i}"
+                        ),
+                    ))
                 }
             }
             chunk_dicts.append(chunk_dict)
         
         return chunk_dicts
     
-    def generate_embeddings(self, texts: List[str]) -> np.ndarray:
+    def generate_embeddings(
+        self,
+        texts: List[str],
+        task_type: str = "RETRIEVAL_DOCUMENT",
+    ) -> np.ndarray:
         """
         Generate embeddings for a list of texts using Gemini API batch processing
         
@@ -162,7 +214,7 @@ class RAGManager:
         
         logger.info(f"Generating embeddings for {len(texts)} texts")
         
-        api_key = os.getenv('GOOGLE_API_KEY')
+        api_key = self.api_key
         if not api_key:
             logger.error("GOOGLE_API_KEY not found in environment variables")
             return np.array([])
@@ -170,7 +222,10 @@ class RAGManager:
         logger.info(f"Using Gemini API with model: {self.embedding_model_name}, dimension: {self.embedding_dimension}")
         
         try:
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents"
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{self.embedding_model_name}:batchEmbedContents"
+            )
             
             headers = {
                 "x-goog-api-key": api_key,
@@ -180,11 +235,11 @@ class RAGManager:
             requests_data = []
             for text in texts:
                 requests_data.append({
-                    "model": "models/gemini-embedding-001",
+                    "model": f"models/{self.embedding_model_name}",
                     "content": {
                         "parts": [{"text": text}]
                     },
-                    "task_type": "RETRIEVAL_DOCUMENT",
+                    "task_type": task_type,
                     "output_dimensionality": self.embedding_dimension
                 })
             
@@ -202,8 +257,10 @@ class RAGManager:
             logger.info(f"Embedding objects returned: {len(api_embeddings)}")
             for embedding_response in api_embeddings:
                 embedding_values = np.array(embedding_response["values"])
-                if self.embedding_dimension < 3072:  # Normalize for truncated dimensions
-                    embedding_values = embedding_values / np.linalg.norm(embedding_values)
+                if self.embedding_dimension < 3072:  # Normalize truncated dimensions
+                    norm = np.linalg.norm(embedding_values)
+                    if norm > 0:
+                        embedding_values = embedding_values / norm
                 embeddings.append(embedding_values)
             
             if len(embeddings) != len(texts):
@@ -229,14 +286,6 @@ class RAGManager:
             logger.error(f"Traceback: {traceback.format_exc()}")
             return np.array([])
     
-    def get_user_vector_db_path(self, username: str) -> str:
-        """Get the path for a user's vector database"""
-        return os.path.join(self.vector_db_path, f"{username}.faiss")
-    
-    def get_user_metadata_path(self, username: str) -> str:
-        """Get the path for a user's metadata file"""
-        return os.path.join(self.vector_db_path, f"{username}_metadata.pkl")
-    
     def add_chunks_to_vector_db(self, username: str, chunks: List[Dict]) -> bool:
         """
         Add text chunks to user's vector database
@@ -252,48 +301,116 @@ class RAGManager:
             return True
         
         try:
-            texts = [chunk['text'] for chunk in chunks]
-            logger.info(f"Preparing to add {len(texts)} chunks for user '{username}'")
-            
+            if not self._ensure_collection():
+                return False
+
+            texts = [chunk["text"] for chunk in chunks]
+            logger.info("Preparing to add %s chunks for user '%s'", len(texts), username)
+
             embeddings = self.generate_embeddings(texts)
-            logger.info(f"Embeddings generated with shape {embeddings.shape} (size={embeddings.size})")
             if embeddings.size == 0:
                 return False
-            
-            faiss_index_path = self.get_user_vector_db_path(username)
-            metadata_path = self.get_user_metadata_path(username)
-            
-            if os.path.exists(faiss_index_path):
-                index = faiss.read_index(faiss_index_path)
-                with open(metadata_path, 'rb') as f:
-                    existing_metadata = pickle.load(f)
-                logger.info(f"Loaded existing FAISS index for '{username}' with ntotal={index.ntotal}")
-            else:
-                index = faiss.IndexFlatIP(self.embedding_dimension)  # Inner product (cosine similarity)
-                existing_metadata = []
-                logger.info(f"Created new FAISS index with dimension d={self.embedding_dimension}")
-            
-            # Normalize embeddings for cosine similarity
-            norms = np.linalg.norm(embeddings, axis=1)
-            logger.info(f"Embedding norms before normalization: min={norms.min():.6f}, max={norms.max():.6f}")
-            safe_denominator = np.maximum(norms, 1e-12)[:, None]
-            embeddings = embeddings / safe_denominator
-            logger.info(f"Adding {embeddings.shape[0]} vectors to FAISS index")
-            index.add(embeddings)
-            
-            existing_metadata.extend(chunks)
-            
-            faiss.write_index(index, faiss_index_path)
-            with open(metadata_path, 'wb') as f:
-                pickle.dump(existing_metadata, f)
-            
-            logger.info(f"Indexed chunks for '{username}': ntotal now {index.ntotal}; metadata entries {len(existing_metadata)}")
+
+            document_id = chunks[0]["metadata"]["document_id"]
+            if not self.delete_documents(username, [document_id]):
+                return False
+
+            points = []
+            for chunk, embedding in zip(chunks, embeddings):
+                metadata = chunk["metadata"]
+                payload = {
+                    "user_id": username,
+                    "document_id": metadata["document_id"],
+                    "cid": metadata["cid"],
+                    "filename": metadata["filename"],
+                    "path": metadata["path"],
+                    "file_type": metadata["file_type"],
+                    "chunk_index": metadata["chunk_index"],
+                    "chunk_text": chunk["text"],
+                    "embedding_model": self.embedding_model_name,
+                }
+                points.append(
+                    models.PointStruct(
+                        id=metadata["chunk_id"],
+                        vector=embedding.tolist(),
+                        payload=payload,
+                    )
+                )
+
+            logger.debug("Upserting %s vectors into Qdrant", len(points))
+            self.qdrant_client.upsert(
+                collection_name=self.COLLECTION_NAME,
+                points=points,
+                wait=True,
+            )
+            logger.info(
+                "Indexed %s chunks for user '%s', document '%s'",
+                len(points),
+                username,
+                document_id,
+            )
             return True
-            
-        except Exception as e:
-            logger.error(f"Failed to add chunks to vector DB: {e}")
+
+        except Exception as exc:
+            logger.error("Failed to add chunks to Qdrant: %s", exc)
             return False
-    
+
+    def delete_documents(self, username: str, document_ids: List[str]) -> bool:
+        """Delete all chunks owned by a user for the supplied document IDs."""
+        if not document_ids:
+            return True
+        if not self._ensure_collection():
+            return False
+
+        try:
+            self.qdrant_client.delete(
+                collection_name=self.COLLECTION_NAME,
+                points_selector=models.FilterSelector(
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="user_id",
+                                match=models.MatchValue(value=username),
+                            ),
+                            models.FieldCondition(
+                                key="document_id",
+                                match=models.MatchAny(any=document_ids),
+                            ),
+                        ]
+                    )
+                ),
+                wait=True,
+            )
+            return True
+        except Exception as exc:
+            logger.error("Failed to delete documents from Qdrant: %s", exc)
+            return False
+
+    def delete_user_data(self, username: str) -> bool:
+        """Delete every indexed chunk owned by a user."""
+        if not self._ensure_collection():
+            return False
+
+        try:
+            self.qdrant_client.delete(
+                collection_name=self.COLLECTION_NAME,
+                points_selector=models.FilterSelector(
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="user_id",
+                                match=models.MatchValue(value=username),
+                            )
+                        ]
+                    )
+                ),
+                wait=True,
+            )
+            return True
+        except Exception as exc:
+            logger.error("Failed to delete user data from Qdrant: %s", exc)
+            return False
+
     def search_user_vector_db(self, username: str, query: str, top_k: int = 5) -> List[Dict]:
         """
         Search user's vector database for relevant chunks
@@ -306,49 +423,86 @@ class RAGManager:
         Returns:
             List of relevant chunks with scores
         """
-        faiss_index_path = self.get_user_vector_db_path(username)
-        metadata_path = self.get_user_metadata_path(username)
-        
-        if not os.path.exists(faiss_index_path) or not os.path.exists(metadata_path):
-            logger.info(f"No vector DB for '{username}' yet (missing index or metadata)")
+        if not self._ensure_collection():
             return []
-        
+
         try:
-            index = faiss.read_index(faiss_index_path)
-            with open(metadata_path, 'rb') as f:
-                metadata = pickle.load(f)
-            logger.info(f"Searching FAISS for '{username}': ntotal={index.ntotal}, top_k={top_k}, metadata={len(metadata)}")
-            
-            query_embedding = self.generate_embeddings([query])
-            logger.info(f"Query embedding shape: {query_embedding.shape} (size={query_embedding.size})")
+            query_embedding = self.generate_embeddings(
+                [query], task_type="RETRIEVAL_QUERY"
+            )
+            logger.debug(
+                "Query embedding shape: %s (size=%s)",
+                query_embedding.shape,
+                query_embedding.size,
+            )
             if query_embedding.size == 0:
                 return []
-            
-            qe_norms = np.linalg.norm(query_embedding, axis=1)
-            logger.info(f"Query embedding norm before normalization: {qe_norms[0]:.6f}")
-            query_embedding = query_embedding / np.maximum(qe_norms, 1e-12)[:, None]
-            
-            scores, indices = index.search(query_embedding, min(top_k, index.ntotal))
-            logger.info(f"Search returned {len(indices[0]) if len(indices)>0 else 0} results")
-            
+
+            response = self.qdrant_client.query_points(
+                collection_name=self.COLLECTION_NAME,
+                query=query_embedding[0].tolist(),
+                query_filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="user_id",
+                            match=models.MatchValue(value=username),
+                        )
+                    ]
+                ),
+                limit=top_k,
+                with_payload=True,
+                with_vectors=False,
+            )
+
             results = []
-            for score, idx in zip(scores[0], indices[0]):
-                if idx >= 0 and idx < len(metadata):
-                    result = {
-                        'chunk': metadata[idx],
-                        'score': float(score)
+            for point in response.points:
+                payload = point.payload or {}
+                metadata = {
+                    key: payload.get(key)
+                    for key in (
+                        "user_id",
+                        "document_id",
+                        "cid",
+                        "filename",
+                        "path",
+                        "file_type",
+                        "chunk_index",
+                        "embedding_model",
+                    )
+                }
+                results.append(
+                    {
+                        "chunk": {
+                            "text": payload.get("chunk_text", ""),
+                            "metadata": metadata,
+                        },
+                        "score": float(point.score),
                     }
-                    results.append(result)
+                )
+
+            logger.info("Qdrant search returned %s results", len(results))
             if results:
-                logger.info(f"Top result score={results[0]['score']:.6f} from file={results[0]['chunk']['metadata'].get('filename','unknown')}")
-            
+                logger.info(
+                    "Top result score=%.6f from file=%s",
+                    results[0]["score"],
+                    results[0]["chunk"]["metadata"].get("filename", "unknown"),
+                )
+
             return results
-            
-        except Exception as e:
-            logger.error(f"Failed to search vector DB: {e}")
+
+        except Exception as exc:
+            logger.error("Failed to search Qdrant: %s", exc)
             return []
-    
-    def process_file_for_rag(self, file_content: bytes, filename: str, username: str, cid: str) -> bool:
+
+    def process_file_for_rag(
+        self,
+        file_content: bytes,
+        filename: str,
+        username: str,
+        cid: str,
+        document_id: str,
+        path: str,
+    ) -> RAGProcessResult:
         """
         Complete pipeline to process a file for RAG
         
@@ -357,67 +511,45 @@ class RAGManager:
             filename: Name of the file
             username: User who uploaded the file
             cid: IPFS CID of the file
+            document_id: Stable uploaded-document identifier
+            path: Current user-visible file path
             
         Returns:
-            Success boolean
+            Processing result including chunk count and error details
         """
         try:
             text = self.extract_text_from_file(file_content, filename)
             if not text.strip():
                 logger.info(f"No text extracted from {filename}")
-                return True
-            
+                return RAGProcessResult(False, error="No extractable text found")
+
             metadata = {
-                'username': username,
-                'filename': filename,
-                'cid': cid,
-                'file_type': filename.lower().split('.')[-1]
+                "user_id": username,
+                "document_id": document_id,
+                "filename": filename,
+                "cid": cid,
+                "path": path,
+                "file_type": filename.lower().split('.')[-1],
             }
-            
+
             chunks = self.chunk_text(text, metadata)
             if not chunks:
                 logger.info(f"No chunks created from {filename}")
-                return True
-            
+                return RAGProcessResult(False, error="No text chunks were created")
+
             success = self.add_chunks_to_vector_db(username, chunks)
-            
             if success:
                 logger.info(f"Successfully processed {filename} for RAG: {len(chunks)} chunks")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"Failed to process file for RAG: {e}")
-            return False
-    
-    def get_user_stats(self, username: str) -> Dict:
-        """Get statistics about user's vector database"""
-        metadata_path = self.get_user_metadata_path(username)
-        
-        stats = {
-            'total_chunks': 0,
-            'total_files': 0,
-            'files': []
-        }
-        
-        if os.path.exists(metadata_path):
-            try:
-                with open(metadata_path, 'rb') as f:
-                    metadata = pickle.load(f)
-                
-                stats['total_chunks'] = len(metadata)
-                
-                files = set()
-                for chunk in metadata:
-                    files.add(chunk['metadata']['filename'])
-                
-                stats['total_files'] = len(files)
-                stats['files'] = list(files)
-                
-            except Exception as e:
-                logger.error(f"Failed to get user stats: {e}")
-        
-        return stats
+                return RAGProcessResult(True, chunk_count=len(chunks))
+
+            return RAGProcessResult(
+                False,
+                error="Embedding generation or Qdrant indexing failed",
+            )
+
+        except Exception as exc:
+            logger.error("Failed to process file for RAG: %s", exc)
+            return RAGProcessResult(False, error=str(exc))
 
 
 class LLMIntegration:
@@ -545,9 +677,9 @@ def get_llm_integration() -> LLMIntegration:
     """Get global LLM integration instance"""
     global llm_integration
     if llm_integration is None:
-        api_key = os.getenv('GOOGLE_API_KEY')
+        api_key = os.getenv("GOOGLE_API_KEY")
         if api_key:
             llm_integration = LLMIntegration("gemini", api_key)
         else:
             llm_integration = LLMIntegration("simple")
-    return llm_integration 
+    return llm_integration

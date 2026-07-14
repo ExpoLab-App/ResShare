@@ -26,17 +26,18 @@ ResShare is a decentralized file sharing application that allows users to secure
 - **Storage**: ResilientDB for Metadata storage and IPFS for File Storage
 - **Authentication**: Session-based authentication
 - **AI/ML**: 
-  - Sentence Transformers for embeddings
-  - FAISS for vector search
-  - Gemini GPT (optional) or local models for response generation
+  - Google Gemini for embeddings
+  - Qdrant for persistent vector search
+  - Gemini 2.5 Flash or an extractive fallback for response generation
   - LangChain for text processing
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Node.js 16+ and npm
 - IPFS daemon running locally
-- (Optional) Gemini API key for enhanced AI responses
+- Qdrant (started automatically by Docker Compose)
+- Gemini API key for document embedding and generated responses
 
 ## Installation
 
@@ -58,33 +59,30 @@ npm install
 cd ..
 ```
 
-4. **Set up AI features (Optional but recommended):**
+4. **Set up AI features:**
 ```bash
-# For enhanced AI responses, set your Gemini API key
+# Required for document embeddings and generated answers
 export GOOGLE_API_KEY="your-gemini-api-key-here"
 ```
 
 ## Running the Application
 
-1. **Start the IPFS daemon:**
+1. **Start the backend, IPFS services, and Qdrant:**
 ```bash
-ipfs daemon
-```
-*To install IPFS Cluster Service, please refer to [this link](https://ipfscluster.io/download/)*
-
-2. **Start the backend server:**
-```bash
-python app.py
+docker compose up --build
 ```
 
-3. **Start the frontend development server:**
+To run IPFS, IPFS Cluster, Qdrant, Flask, and React as separate local processes,
+follow the [manual local development guide](development.md).
+
+2. **Start the frontend development server:**
 ```bash
 cd frontend
 npm start
 ```
 
 The application will be available at:
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:5997
 - Backend API: http://localhost:5000
 
 ## Using the AI Chatbot
@@ -113,16 +111,12 @@ The application will be available at:
 
 ## Configuration
 
-### Basic Configuration (No API key required)
-The AI chatbot works out of the box with:
-- Local sentence transformer models for embeddings
-- FAISS for fast vector search
-- Simple extractive responses
+### Gemini Configuration
+Document embedding requires a Gemini API key. The same key enables generated
+answers; without it, indexing fails while the uploaded file remains available.
 
-### Enhanced Configuration (With Gemini)
-For higher quality responses, set up Gemini:
 ```bash
-export GOOGLE_API_KEY="sk-your-key-here"
+export GOOGLE_API_KEY="your-key-here"
 ```
 
 ## Usage
@@ -154,5 +148,5 @@ User Query → Query Embedding → Vector Search → Context → LLM → Respons
 - **Text Extractors**: PDF (PyPDF2), DOCX (python-docx), TXT (UTF-8)
 - **Chunking**: LangChain RecursiveCharacterTextSplitter
 - **Embeddings**: Google Gemini API (gemini-embedding-001) with configurable dimensions (768/1536/3072)
-- **Vector DB**: FAISS with per-user isolation
+- **Vector DB**: Qdrant with authenticated per-user payload filtering
 - **LLM**: Gemini 2.5 Flash (optional) or extractive fallback

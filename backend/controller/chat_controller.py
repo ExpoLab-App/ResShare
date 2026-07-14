@@ -1,8 +1,12 @@
 from flask import jsonify, request, session
 
-from backend.controller.helpers import login_required
+from backend.controller.helpers import (
+    get_indexed_file_stats,
+    get_root_node,
+    login_required,
+    route_logger,
+)
 from backend.rag_utils import get_llm_integration, get_rag_manager
-from backend.controller.helpers import route_logger
 
 
 def register_chat_routes(app, logger):
@@ -61,8 +65,12 @@ def register_chat_routes(app, logger):
     def chat_stats_route():
         try:
             username = session['username']
-            rag_manager = get_rag_manager()
-            stats = rag_manager.get_user_stats(username)
+            root = get_root_node(username)
+            stats = get_indexed_file_stats(root) if root else {
+                'total_chunks': 0,
+                'total_files': 0,
+                'files': [],
+            }
 
             return jsonify(stats), 200
 

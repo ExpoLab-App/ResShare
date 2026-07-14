@@ -19,13 +19,15 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - STORAGE_TYPE=${STORAGE_TYPE}
       - KV_SERVICE_URL=${KV_SERVICE_URL}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    depends_on:
+      - qdrant
     volumes:
       # Persist IPFS data
       - ipfs_data:/root/.ipfs
       # Persist IPFS Cluster data
       - ipfs_cluster_data:/root/.ipfs-cluster
-      # Persist vector database
-      - vector_db:/app/backend/vector_db
     restart: "no"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5000/ && curl -f http://localhost:8080/api/v0/version && curl -f http://localhost:9094/api/v0/id"]
@@ -34,8 +36,16 @@ services:
       retries: 3
       start_period: 120s
 
+  qdrant:
+    image: qdrant/qdrant:v1.18.1
+    container_name: resshare-qdrant
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: "no"
+
 volumes:
   ipfs_data:
   ipfs_cluster_data:
-  vector_db:
-
+  qdrant_data:

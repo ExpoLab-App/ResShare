@@ -37,21 +37,6 @@ def add_file_to_cluster(file_obj, filename):
         return None
 
 
-def get_file_status(cid):
-    if ipfs_cluster_api_url is None or ipfs_gateway_url is None:
-        read_config_file()
-
-    url = f"{ipfs_cluster_api_url}pins/{cid}"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print("Failed to get file status from IPFS Cluster.")
-        print(response.text)
-        return None
-
-
 def download_file_from_ipfs(cid):
     """
     Downloads a file from IPFS and returns a BytesIO object.

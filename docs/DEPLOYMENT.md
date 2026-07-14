@@ -31,8 +31,9 @@ This guide covers deploying the ResShare backend using Docker, both locally and 
 ### Step 1: Prepare Environment
 
 1. **Clone or navigate to your project directory:**
-   ```bash
-   cd /home/devang/Projects/ResShareDeployable
+   ```
+   git clone https://github.com/ExpoLab-App/ResShare.git
+   cd ResShare
    ```
 
 2. **Create environment file:**
@@ -59,7 +60,6 @@ docker build -t resshare-backend:latest . --no-cache
 
 This will take 10-15 minutes on first build. It will:
 - Install all system dependencies
-- Install Bazel and build C++ components
 - Install IPFS and IPFS Cluster
 - Install Python dependencies
 - Set up the application
@@ -95,13 +95,22 @@ docker-compose down -v
 
 **Start container:**
 ```bash
+docker network create resshare
+docker run -d \
+  --name resshare-qdrant \
+  --network resshare \
+  -v resshare_qdrant_data:/qdrant/storage \
+  qdrant/qdrant:v1.18.1
+
 docker run -d \
   --name resshare-backend \
+  --network resshare \
   -p 5000:5000 \
   -e GOOGLE_API_KEY="your-api-key-here" \
+  -e QDRANT_HOST="resshare-qdrant" \
+  -e QDRANT_PORT="6333" \
   -v resshare_ipfs:/root/.ipfs \
   -v resshare_ipfs_cluster:/root/.ipfs-cluster \
-  -v resshare_vector_db:/app/backend/vector_db \
   resshare-backend:latest
 ```
 
@@ -237,22 +246,21 @@ docker compose version
 ```bash
 # On EC2 instance
 cd ~
-git clone https://github.com/your-username/ResShareDeployable.git
-cd ResShareDeployable
+git clone https://github.com/ExpoLab-App/ResShare.git
+cd ResShare
 ```
 
 **Option B: Using SCP from local machine**
 
 ```bash
 # On your local machine
-cd /home/devang/Projects/ResShareDeployable
+cd ResShare
 
 # Create tarball (exclude unnecessary files)
 tar -czf resshare.tar.gz \
     --exclude='frontend/node_modules' \
     --exclude='backend/__pycache__' \
     --exclude='backend/bazel/bazel-*' \
-    --exclude='backend/vector_db' \
     --exclude='.git' \
     .
 
@@ -263,7 +271,7 @@ scp -i your-key.pem resshare.tar.gz ubuntu@your-ec2-public-ip:~/
 ssh -i your-key.pem ubuntu@your-ec2-public-ip
 cd ~
 tar -xzf resshare.tar.gz -C ResShareDeployable/
-cd ResShareDeployable
+cd ResShare
 ```
 
 ### Step 5: Configure Environment on EC2
@@ -321,7 +329,7 @@ docker compose logs -f
    ```bash
    curl -X POST http://your-ec2-public-ip:5000/signup \
      -H "Content-Type: application/json" \
-     -d '{"username":"testuser","password":"testpass123"}'
+     -d '{"username":"testuser","password":"Pass@123"}'
    ```
 
 ### Step 8: Configure Frontend to Use EC2 Backend
@@ -366,22 +374,24 @@ By default, the application allows CORS from `http://localhost:5997`. To change 
 |----------------|--------------------------------------|----------|-------------|
 | GOOGLE_API_KEY | Google Gemini API key for RAG chat   | Yes      | None        |
 | FLASK_ENV      | Flask environment (production/debug) | No       | production  |
+| QDRANT_HOST    | Qdrant service hostname              | No       | localhost   |
+| QDRANT_PORT    | Qdrant HTTP port                     | No       | 6333        |
 
 ### Persistent Data
 
 Docker volumes are used to persist data:
 - `ipfs_data`: IPFS blockchain data
 - `ipfs_cluster_data`: IPFS cluster configuration
-- `vector_db`: RAG vector database
+- `qdrant_data`: Qdrant collection data and indexes
 
 **Backup volumes:**
 ```bash
-docker run --rm -v resshare_vector_db:/data -v $(pwd):/backup ubuntu tar czf /backup/vector_db_backup.tar.gz -C /data .
+docker run --rm -v resshare_qdrant_data:/data -v $(pwd):/backup ubuntu tar czf /backup/qdrant_backup.tar.gz -C /data .
 ```
 
 **Restore volumes:**
 ```bash
-docker run --rm -v resshare_vector_db:/data -v $(pwd):/backup ubuntu tar xzf /backup/vector_db_backup.tar.gz -C /data
+docker run --rm -v resshare_qdrant_data:/data -v $(pwd):/backup ubuntu tar xzf /backup/qdrant_backup.tar.gz -C /data
 ```
 
 ---
@@ -408,18 +418,6 @@ docker exec -it resshare-backend bash
 ipfs id
 ipfs-cluster-service --version
 ```
-
-### Build fails
-
-**Check Bazel build:**
-```bash
-docker build --no-cache -t resshare-backend:latest .
-```
-
-**If Bazel fails:**
-- Increase Docker memory limit (Docker Desktop: Settings → Resources)
-- Try building on a more powerful machine or EC2 instance
-
 ### Application not accessible from outside
 
 **Check security group:**
@@ -534,7 +532,7 @@ sudo systemctl start resshare.service
 ### Update application
 
 ```bash
-cd ~/ResShareDeployable
+cd ResShare
 git pull origin main
 docker compose down
 docker build -t resshare-backend:latest .
@@ -554,9 +552,9 @@ docker compose logs -f
 docker run --rm \
   -v resshare_ipfs:/ipfs \
   -v resshare_ipfs_cluster:/cluster \
-  -v resshare_vector_db:/vector_db \
+  -v resshare_qdrant_data:/qdrant \
   -v $(pwd):/backup \
-  ubuntu tar czf /backup/resshare_backup_$(date +%Y%m%d).tar.gz -C / ipfs cluster vector_db
+  ubuntu tar czf /backup/resshare_backup_$(date +%Y%m%d).tar.gz -C / ipfs cluster qdrant
 ```
 
 ---
@@ -565,6 +563,5 @@ docker run --rm \
 
 For issues and questions:
 - Check logs: `docker compose logs`
-- GitHub Issues: [Your repo URL]
-- Documentation: [Your docs URL]
-
+- GitHub Issues: [ExpoLab-App/ResShare](https://github.com/ExpoLab-App/ResShare/issues)
+- Documentation: [ResShare Docs](./)
