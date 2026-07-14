@@ -95,13 +95,22 @@ docker-compose down -v
 
 **Start container:**
 ```bash
+docker network create resshare
+docker run -d \
+  --name resshare-qdrant \
+  --network resshare \
+  -v resshare_qdrant_data:/qdrant/storage \
+  qdrant/qdrant:v1.18.1
+
 docker run -d \
   --name resshare-backend \
+  --network resshare \
   -p 5000:5000 \
   -e GOOGLE_API_KEY="your-api-key-here" \
+  -e QDRANT_HOST="resshare-qdrant" \
+  -e QDRANT_PORT="6333" \
   -v resshare_ipfs:/root/.ipfs \
   -v resshare_ipfs_cluster:/root/.ipfs-cluster \
-  -v resshare_vector_db:/app/backend/vector_db \
   resshare-backend:latest
 ```
 
@@ -252,7 +261,6 @@ tar -czf resshare.tar.gz \
     --exclude='frontend/node_modules' \
     --exclude='backend/__pycache__' \
     --exclude='backend/bazel/bazel-*' \
-    --exclude='backend/vector_db' \
     --exclude='.git' \
     .
 
@@ -366,22 +374,24 @@ By default, the application allows CORS from `http://localhost:5997`. To change 
 |----------------|--------------------------------------|----------|-------------|
 | GOOGLE_API_KEY | Google Gemini API key for RAG chat   | Yes      | None        |
 | FLASK_ENV      | Flask environment (production/debug) | No       | production  |
+| QDRANT_HOST    | Qdrant service hostname              | No       | localhost   |
+| QDRANT_PORT    | Qdrant HTTP port                     | No       | 6333        |
 
 ### Persistent Data
 
 Docker volumes are used to persist data:
 - `ipfs_data`: IPFS blockchain data
 - `ipfs_cluster_data`: IPFS cluster configuration
-- `vector_db`: RAG vector database
+- `qdrant_data`: Qdrant collection data and indexes
 
 **Backup volumes:**
 ```bash
-docker run --rm -v resshare_vector_db:/data -v $(pwd):/backup ubuntu tar czf /backup/vector_db_backup.tar.gz -C /data .
+docker run --rm -v resshare_qdrant_data:/data -v $(pwd):/backup ubuntu tar czf /backup/qdrant_backup.tar.gz -C /data .
 ```
 
 **Restore volumes:**
 ```bash
-docker run --rm -v resshare_vector_db:/data -v $(pwd):/backup ubuntu tar xzf /backup/vector_db_backup.tar.gz -C /data
+docker run --rm -v resshare_qdrant_data:/data -v $(pwd):/backup ubuntu tar xzf /backup/qdrant_backup.tar.gz -C /data
 ```
 
 ---
@@ -554,9 +564,9 @@ docker compose logs -f
 docker run --rm \
   -v resshare_ipfs:/ipfs \
   -v resshare_ipfs_cluster:/cluster \
-  -v resshare_vector_db:/vector_db \
+  -v resshare_qdrant_data:/qdrant \
   -v $(pwd):/backup \
-  ubuntu tar czf /backup/resshare_backup_$(date +%Y%m%d).tar.gz -C / ipfs cluster vector_db
+  ubuntu tar czf /backup/resshare_backup_$(date +%Y%m%d).tar.gz -C / ipfs cluster qdrant
 ```
 
 ---
@@ -567,4 +577,3 @@ For issues and questions:
 - Check logs: `docker compose logs`
 - GitHub Issues: [Your repo URL]
 - Documentation: [Your docs URL]
-

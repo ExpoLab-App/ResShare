@@ -18,6 +18,11 @@ docker compose logs -f
 curl http://localhost:5000/
 ```
 
+## Manual Local Development
+
+See the dedicated [local development guide](../development.md) for the complete
+manual startup flow for IPFS, IPFS Cluster, Qdrant, Flask, and React.
+
 ## AWS EC2 Deployment (30 Minutes)
 
 ### Quick Steps
@@ -183,15 +188,15 @@ docker inspect resshare-backend | grep -A 10 Health
 docker run --rm \
   -v resshare_ipfs:/ipfs \
   -v resshare_ipfs_cluster:/cluster \
-  -v resshare_vector_db:/vector_db \
+  -v resshare_qdrant_data:/qdrant \
   -v $(pwd):/backup \
-  ubuntu tar czf /backup/backup_$(date +%Y%m%d).tar.gz -C / ipfs cluster vector_db
+  ubuntu tar czf /backup/backup_$(date +%Y%m%d).tar.gz -C / ipfs cluster qdrant
 
 # Restore
 docker run --rm \
   -v resshare_ipfs:/ipfs \
   -v resshare_ipfs_cluster:/cluster \
-  -v resshare_vector_db:/vector_db \
+  -v resshare_qdrant_data:/qdrant \
   -v $(pwd):/backup \
   ubuntu tar xzf /backup/backup_YYYYMMDD.tar.gz -C /
 ```
@@ -246,4 +251,3 @@ sudo certbot --nginx -d your-domain.com
 ## Full Documentation
 
 For detailed instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
-

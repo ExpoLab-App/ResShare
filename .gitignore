@@ -60,3 +60,4 @@ MODULE.bazel.lock
 AGENTS.md
 qa-test.txt
 temp/
+dev-environment-deployment.md
