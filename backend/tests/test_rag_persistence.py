@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from backend.rag_persistence import (
+from backend.services.rag_persistence import (
     RAGPersistenceResult,
     persist_root_with_rag_rollback,
 )
@@ -11,7 +11,7 @@ class RAGPersistenceTest(unittest.TestCase):
     def test_successful_metadata_write_does_not_delete_vectors(self):
         manager = Mock()
 
-        with patch("backend.rag_persistence.set_kv", return_value=True) as set_kv:
+        with patch("backend.services.rag_persistence.set_kv", return_value=True) as set_kv:
             result = persist_root_with_rag_rollback(
                 "alice",
                 "root-json",
@@ -27,7 +27,7 @@ class RAGPersistenceTest(unittest.TestCase):
         manager = Mock()
         manager.delete_documents.return_value = True
 
-        with patch("backend.rag_persistence.set_kv", return_value=False):
+        with patch("backend.services.rag_persistence.set_kv", return_value=False):
             result = persist_root_with_rag_rollback(
                 "alice",
                 "root-json",
@@ -42,7 +42,7 @@ class RAGPersistenceTest(unittest.TestCase):
         manager = Mock()
         manager.delete_documents.return_value = False
 
-        with patch("backend.rag_persistence.set_kv", return_value=False):
+        with patch("backend.services.rag_persistence.set_kv", return_value=False):
             result = persist_root_with_rag_rollback(
                 "alice",
                 "root-json",

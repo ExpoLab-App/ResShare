@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 import numpy as np
 from qdrant_client import QdrantClient
 
-from backend.rag_utils import RAGManager
+from backend.services.rag_utils import RAGManager
 
 
 class QdrantRAGManagerTest(unittest.TestCase):

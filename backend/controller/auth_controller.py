@@ -3,16 +3,16 @@ import json
 
 from flask import jsonify, request, session
 
-from backend.RSDB_kv_service import get_kv, set_kv
-from backend.error import ErrorCode
-from backend.user_authentication_service import login, sign_up
+from backend.services.RSDB_kv_service import get_kv, set_kv
+from backend.utils.error import ErrorCode
+from backend.services.user_authentication_service import login, sign_up
 from backend.controller.helpers import (
     collect_indexed_document_ids,
     get_resolved_share_list,
     get_root_node,
     login_required,
 )
-from backend.rag_utils import get_rag_manager
+from backend.services.rag_utils import get_rag_manager
 
 
 def register_auth_routes(app, logger):

@@ -1,6 +1,6 @@
 """Manually verify a configured ResilientDB key-value service."""
 
-from backend.RSDB_kv_service import get_kv, set_kv
+from backend.services.RSDB_kv_service import get_kv, set_kv
 
 
 def main():

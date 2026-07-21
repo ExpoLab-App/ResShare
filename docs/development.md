@@ -19,7 +19,7 @@ ResilientDB metadata storage, you need a reachable ResilientDB KV service.
 
 ## One-time setup
 
-Install the project dependencies described in the [README](README.md), then
+Install the project dependencies described in the [README](../README.md), then
 initialize the local IPFS repositories:
 
 ```bash

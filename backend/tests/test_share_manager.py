@@ -1,8 +1,8 @@
 import unittest
 
-from backend.error import ErrorCode
-from backend.node import Node
-from backend.share_manager import ShareManager
+from backend.utils.error import ErrorCode
+from backend.models.node import Node
+from backend.services.share_manager import ShareManager
 
 
 class ShareManagerResolveForClientTest(unittest.TestCase):

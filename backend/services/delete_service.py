@@ -1,10 +1,10 @@
 from flask import jsonify, session
-from backend.RSDB_kv_service import get_kv, set_kv
-from backend.error import ErrorCode
-from backend.node import Node
-from backend.share_manager import ShareManager
+from backend.services.RSDB_kv_service import get_kv, set_kv
+from backend.utils.error import ErrorCode
+from backend.models.node import Node
+from backend.services.share_manager import ShareManager
 from backend.controller.helpers import collect_indexed_document_ids
-from backend.rag_utils import get_rag_manager
+from backend.services.rag_utils import get_rag_manager
 
 
 def _load_root(username: str):

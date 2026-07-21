@@ -73,7 +73,7 @@ docker compose up --build
 ```
 
 To run IPFS, IPFS Cluster, Qdrant, Flask, and React as separate local processes,
-follow the [manual local development guide](development.md).
+follow the [manual local development guide](docs/development.md).
 
 2. **Start the frontend development server:**
 ```bash

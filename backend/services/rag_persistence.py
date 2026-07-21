@@ -1,8 +1,8 @@
 import logging
 from enum import Enum
 from typing import Optional
-from backend.rag_utils import RAGManager
-from backend.RSDB_kv_service import set_kv
+from backend.services.rag_utils import RAGManager
+from backend.services.RSDB_kv_service import set_kv
 
 
 logger = logging.getLogger(__name__)

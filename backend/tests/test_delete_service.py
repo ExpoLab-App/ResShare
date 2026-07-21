@@ -3,10 +3,9 @@ from unittest.mock import Mock, patch
 
 from flask import Flask, session
 
-from backend.delete_service import delete_node
-from backend.file import File
-from backend.node import Node
-
+from backend.services.delete_service import delete_node
+from backend.models.file import File
+from backend.models.node import Node
 
 class DeleteServiceRAGTest(unittest.TestCase):
     def setUp(self):
@@ -33,10 +32,10 @@ class DeleteServiceRAGTest(unittest.TestCase):
 
         with self.app.test_request_context("/"):
             session["username"] = "alice"
-            with patch("backend.delete_service.get_kv", return_value=root.to_json()), patch(
-                "backend.delete_service.set_kv", return_value=True
+            with patch("backend.services.delete_service.get_kv", return_value=root.to_json()), patch(
+                "backend.services.delete_service.set_kv", return_value=True
             ) as set_kv, patch(
-                "backend.delete_service.get_rag_manager", return_value=manager
+                "backend.services.delete_service.get_rag_manager", return_value=manager
             ):
                 response, status = delete_node(
                     {"node_path": "indexed.txt", "delete_in_root": True}
@@ -54,10 +53,10 @@ class DeleteServiceRAGTest(unittest.TestCase):
 
         with self.app.test_request_context("/"):
             session["username"] = "alice"
-            with patch("backend.delete_service.get_kv", return_value=root.to_json()), patch(
-                "backend.delete_service.set_kv", return_value=True
+            with patch("backend.services.delete_service.get_kv", return_value=root.to_json()), patch(
+                "backend.services.delete_service.set_kv", return_value=True
             ) as set_kv, patch(
-                "backend.delete_service.get_rag_manager", return_value=manager
+                "backend.services.delete_service.get_rag_manager", return_value=manager
             ):
                 response, status = delete_node(
                     {"node_path": "indexed.txt", "delete_in_root": True}
@@ -92,10 +91,10 @@ class DeleteServiceRAGTest(unittest.TestCase):
 
         with self.app.test_request_context("/"):
             session["username"] = "alice"
-            with patch("backend.delete_service.get_kv", return_value=root.to_json()), patch(
-                "backend.delete_service.set_kv", return_value=True
+            with patch("backend.services.delete_service.get_kv", return_value=root.to_json()), patch(
+                "backend.services.delete_service.set_kv", return_value=True
             ) as set_kv, patch(
-                "backend.delete_service.get_rag_manager", return_value=manager
+                "backend.services.delete_service.get_rag_manager", return_value=manager
             ):
                 _, status = delete_node(
                     {"node_path": "docs", "delete_in_root": True}

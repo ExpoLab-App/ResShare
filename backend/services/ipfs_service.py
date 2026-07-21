@@ -1,6 +1,7 @@
 import os
 import requests
 from io import BytesIO
+from pathlib import Path
 
 ipfs_cluster_api_url = None
 ipfs_gateway_url = None
@@ -8,9 +9,11 @@ ipfs_gateway_url = None
 
 def read_config_file():
     global ipfs_cluster_api_url, ipfs_gateway_url
-    base_dir = os.path.dirname(__file__)
-    config_path = os.path.join(base_dir, 'config/ipfs.config')
-    with open(config_path) as f:
+    base_dir = Path(__file__).resolve().parent.parent
+    cfg_path = base_dir / 'config' / 'ipfs.config'
+    if not cfg_path.exists():
+        raise FileNotFoundError(f"IPFS config file not found at {cfg_path}")
+    with open(cfg_path) as f:
         ipfs_cluster_api_url = f.readline().strip()
         ipfs_gateway_url = f.readline().strip()
 

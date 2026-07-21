@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 from flask import Flask
 
 from backend.controller.file_controller import register_file_routes
-from backend.node import Node
-from backend.rag_utils import RAGProcessResult
+from backend.models.node import Node
+from backend.services.rag_utils import RAGProcessResult
 
 
 class FileControllerRAGFailureTest(unittest.TestCase):
@@ -32,7 +32,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         with patch(
             "backend.controller.file_controller.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.rag_persistence.set_kv", side_effect=capture_root
+            "backend.services.rag_persistence.set_kv", side_effect=capture_root
         ), patch(
             "backend.controller.file_controller.add_file_to_cluster",
             return_value="test-cid",
@@ -70,7 +70,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         with patch(
             "backend.controller.file_controller.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.rag_persistence.set_kv",
+            "backend.services.rag_persistence.set_kv",
             side_effect=lambda key, value: saved_roots.append(value) or True,
         ), patch(
             "backend.controller.file_controller.add_file_to_cluster",
@@ -112,7 +112,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         with patch(
             "backend.controller.file_controller.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.rag_persistence.set_kv", return_value=False
+            "backend.services.rag_persistence.set_kv", return_value=False
         ), patch(
             "backend.controller.file_controller.add_file_to_cluster",
             return_value="test-cid",
@@ -152,7 +152,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         with patch(
             "backend.controller.file_controller.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.rag_persistence.set_kv", return_value=False
+            "backend.services.rag_persistence.set_kv", return_value=False
         ), patch(
             "backend.controller.file_controller.add_file_to_cluster",
             return_value="test-cid",
@@ -182,7 +182,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         with patch(
             "backend.controller.file_controller.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.rag_persistence.set_kv",
+            "backend.services.rag_persistence.set_kv",
             side_effect=lambda key, value: saved_roots.append(value) or True,
         ), patch(
             "backend.controller.file_controller.add_file_to_cluster",

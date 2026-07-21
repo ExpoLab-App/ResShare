@@ -6,7 +6,7 @@ from backend.controller.helpers import (
     login_required,
     route_logger,
 )
-from backend.rag_utils import get_llm_integration, get_rag_manager
+from backend.services.rag_utils import get_llm_integration, get_rag_manager
 
 
 def register_chat_routes(app, logger):

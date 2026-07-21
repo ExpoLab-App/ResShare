@@ -4,13 +4,13 @@ import zipfile
 
 from flask import jsonify, request, send_file, session
 
-from backend.RSDB_kv_service import get_kv, set_kv
-from backend.delete_service import delete_node
-from backend.error import ErrorCode
-from backend.file import File
-from backend.ipfs import add_file_to_cluster, download_file_from_ipfs
-from backend.node import Node
-from backend.rag_persistence import (
+from backend.services.RSDB_kv_service import get_kv, set_kv
+from backend.services.delete_service import delete_node
+from backend.utils.error import ErrorCode
+from backend.models.file import File
+from backend.services.ipfs_service import add_file_to_cluster, download_file_from_ipfs
+from backend.models.node import Node
+from backend.services.rag_persistence import (
     RAGPersistenceResult,
     persist_root_with_rag_rollback,
 )
@@ -21,8 +21,8 @@ from backend.controller.helpers import (
     login_required,
     route_logger,
 )
-from backend.util import validate_file_size
-from backend.rag_utils import get_rag_manager
+from backend.utils.util import validate_file_size
+from backend.services.rag_utils import get_rag_manager
 
 FILE_SIZE_LIMIT = 1024 * 1024  # 1 MB limit
 
@@ -74,10 +74,7 @@ def register_file_routes(app, logger):
         Upload file to IPFS and process for RAG if it's a supported text format.
         if user want to upload example.txt to path root/doc/example.txt. The path part in request should be root/doc
         """
-        if 'file' not in request.files:
-            return jsonify({'message': ErrorCode.INVALID_REQUEST.name}), 400
-
-        if 'path' not in request.form:
+        if 'file' not in request.files or 'path' not in request.form:
             return jsonify({'message': ErrorCode.INVALID_REQUEST.name}), 400
 
         path = request.form['path']
