@@ -4,7 +4,7 @@ from backend.services.share_manager import ShareManager
 from backend.utils.util import is_valid_password, is_valid_username
 
 from backend.utils.error import ErrorCode
-from backend.services.RSDB_kv_service import get_kv, set_kv
+from backend.storage.kv import get_kv, set_kv
 from backend.models.node import Node
 
 def sign_up(username, password):

@@ -4,7 +4,7 @@ from typing import Optional
 
 from flask import jsonify, session
 
-from backend.services.RSDB_kv_service import get_kv
+from backend.storage.kv import get_kv
 from backend.utils.error import ErrorCode
 from backend.models.node import Node
 from backend.services.share_manager import ShareManager

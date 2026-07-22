@@ -3,8 +3,9 @@ import json
 
 from flask import jsonify, request, session
 
-from backend.services.RSDB_kv_service import get_kv, set_kv
+from backend.storage.kv import get_kv, set_kv
 from backend.utils.error import ErrorCode
+from backend.services.delete_service import delete_user_data
 from backend.services.user_authentication_service import login, sign_up
 from backend.controller.helpers import (
     collect_indexed_document_ids,
@@ -12,7 +13,6 @@ from backend.controller.helpers import (
     get_root_node,
     login_required,
 )
-from backend.services.rag_utils import get_rag_manager
 
 
 def register_auth_routes(app, logger):
@@ -71,7 +71,7 @@ def register_auth_routes(app, logger):
 
         root = get_root_node(username)
         has_indexed_documents = bool(root and collect_indexed_document_ids(root))
-        if has_indexed_documents and not get_rag_manager().delete_user_data(username):
+        if has_indexed_documents and not delete_user_data(username):
             return jsonify({'message': 'RAG_DELETE_FAILED'}), 503
 
         set_kv(username, "\n")

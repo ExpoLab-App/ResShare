@@ -6,7 +6,7 @@ from flask import Flask
 
 from backend.controller.file_controller import register_file_routes
 from backend.models.node import Node
-from backend.services.rag_utils import RAGProcessResult
+from backend.rag.types import RAGProcessResult
 
 
 class FileControllerRAGFailureTest(unittest.TestCase):
@@ -17,9 +17,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
 
     def test_upload_succeeds_and_records_failed_rag_status(self):
         root = Node("root", True)
-        manager = Mock()
-        manager.embedding_model_name = "gemini-embedding-001"
-        manager.process_file_for_rag.return_value = RAGProcessResult(
+        rag_result = RAGProcessResult(
             False,
             error="Qdrant unavailable",
         )
@@ -30,14 +28,15 @@ class FileControllerRAGFailureTest(unittest.TestCase):
             return True
 
         with patch(
-            "backend.controller.file_controller.get_kv", return_value=root.to_json()
+            "backend.services.upload_service.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.services.rag_persistence.set_kv", side_effect=capture_root
+            "backend.services.upload_service.set_kv", side_effect=capture_root
         ), patch(
-            "backend.controller.file_controller.add_file_to_cluster",
+            "backend.services.upload_service.add_file_to_cluster",
             return_value="test-cid",
         ), patch(
-            "backend.controller.file_controller.get_rag_manager", return_value=manager
+            "backend.services.upload_service.process_file_for_rag",
+            return_value=rag_result,
         ):
             with self.app.test_client() as client:
                 with client.session_transaction() as client_session:
@@ -62,21 +61,19 @@ class FileControllerRAGFailureTest(unittest.TestCase):
 
     def test_upload_records_failed_rag_status_when_processing_raises(self):
         root = Node("root", True)
-        manager = Mock()
-        manager.embedding_model_name = "gemini-embedding-001"
-        manager.process_file_for_rag.side_effect = RuntimeError("Qdrant unavailable")
         saved_roots = []
 
         with patch(
-            "backend.controller.file_controller.get_kv", return_value=root.to_json()
+            "backend.services.upload_service.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.services.rag_persistence.set_kv",
+            "backend.services.upload_service.set_kv",
             side_effect=lambda key, value: saved_roots.append(value) or True,
         ), patch(
-            "backend.controller.file_controller.add_file_to_cluster",
+            "backend.services.upload_service.add_file_to_cluster",
             return_value="test-cid",
         ), patch(
-            "backend.controller.file_controller.get_rag_manager", return_value=manager
+            "backend.services.upload_service.process_file_for_rag",
+            side_effect=RuntimeError("Qdrant unavailable"),
         ):
             with self.app.test_client() as client:
                 with client.session_transaction() as client_session:
@@ -103,21 +100,24 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         root = Node("root", True)
         manager = Mock()
         manager.embedding_model_name = "gemini-embedding-001"
-        manager.process_file_for_rag.return_value = RAGProcessResult(
+        rag_result = RAGProcessResult(
             True,
             chunk_count=1,
         )
         manager.delete_documents.return_value = True
 
         with patch(
-            "backend.controller.file_controller.get_kv", return_value=root.to_json()
+            "backend.services.upload_service.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.services.rag_persistence.set_kv", return_value=False
+            "backend.services.upload_service.set_kv", return_value=False
         ), patch(
-            "backend.controller.file_controller.add_file_to_cluster",
+            "backend.services.upload_service.add_file_to_cluster",
             return_value="test-cid",
         ), patch(
-            "backend.controller.file_controller.get_rag_manager", return_value=manager
+            "backend.services.upload_service.process_file_for_rag",
+            return_value=rag_result,
+        ) as process_file_for_rag, patch(
+            "backend.services.upload_service.get_vector_store", return_value=manager
         ):
             with self.app.test_client() as client:
                 with client.session_transaction() as client_session:
@@ -132,32 +132,35 @@ class FileControllerRAGFailureTest(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.get_json()["message"], "METADATA_WRITE_FAILED")
+        self.assertEqual(response.get_json()["message"], "KV_SERVICE_ERROR")
         manager.delete_documents.assert_called_once()
         self.assertEqual(
             manager.delete_documents.call_args.args,
-            ("alice", [manager.process_file_for_rag.call_args.args[4]]),
+            ("alice", [process_file_for_rag.call_args.args[4]]),
         )
 
     def test_upload_reports_failed_rollback_after_metadata_write_fails(self):
         root = Node("root", True)
         manager = Mock()
         manager.embedding_model_name = "gemini-embedding-001"
-        manager.process_file_for_rag.return_value = RAGProcessResult(
+        rag_result = RAGProcessResult(
             True,
             chunk_count=1,
         )
         manager.delete_documents.return_value = False
 
         with patch(
-            "backend.controller.file_controller.get_kv", return_value=root.to_json()
+            "backend.services.upload_service.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.services.rag_persistence.set_kv", return_value=False
+            "backend.services.upload_service.set_kv", return_value=False
         ), patch(
-            "backend.controller.file_controller.add_file_to_cluster",
+            "backend.services.upload_service.add_file_to_cluster",
             return_value="test-cid",
         ), patch(
-            "backend.controller.file_controller.get_rag_manager", return_value=manager
+            "backend.services.upload_service.process_file_for_rag",
+            return_value=rag_result,
+        ), patch(
+            "backend.services.upload_service.get_vector_store", return_value=manager
         ):
             with self.app.test_client() as client:
                 with client.session_transaction() as client_session:
@@ -172,7 +175,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
                 )
 
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.get_json()["message"], "RAG_ROLLBACK_FAILED")
+        self.assertEqual(response.get_json()["message"], "KV_SERVICE_ERROR")
         manager.delete_documents.assert_called_once()
 
     def test_upload_persists_skipped_file_once(self):
@@ -180,16 +183,16 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         saved_roots = []
 
         with patch(
-            "backend.controller.file_controller.get_kv", return_value=root.to_json()
+            "backend.services.upload_service.get_kv", return_value=root.to_json()
         ), patch(
-            "backend.services.rag_persistence.set_kv",
+            "backend.services.upload_service.set_kv",
             side_effect=lambda key, value: saved_roots.append(value) or True,
         ), patch(
-            "backend.controller.file_controller.add_file_to_cluster",
+            "backend.services.upload_service.add_file_to_cluster",
             return_value="test-cid",
         ), patch(
-            "backend.controller.file_controller.get_rag_manager"
-        ) as get_rag_manager:
+            "backend.services.upload_service.process_file_for_rag"
+        ) as process_file_for_rag:
             with self.app.test_client() as client:
                 with client.session_transaction() as client_session:
                     client_session["username"] = "alice"
@@ -207,7 +210,7 @@ class FileControllerRAGFailureTest(unittest.TestCase):
         self.assertEqual(len(saved_roots), 1)
         saved_root = Node.from_json(saved_roots[0])
         self.assertEqual(saved_root.children["notes.txt"].file_obj.rag_status, "skipped")
-        get_rag_manager.assert_not_called()
+        process_file_for_rag.assert_not_called()
 
 
 if __name__ == "__main__":

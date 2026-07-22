@@ -1,7 +1,7 @@
-import os
 import requests
 from io import BytesIO
 from pathlib import Path
+
 
 ipfs_cluster_api_url = None
 ipfs_gateway_url = None
@@ -51,7 +51,6 @@ def download_file_from_ipfs(cid):
         read_config_file()
 
     url = f"{ipfs_gateway_url}ipfs/{cid}"
-    print(f"Download URL: {url}")
 
     try:
         response = requests.get(url, stream=True, timeout=10)
