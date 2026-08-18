@@ -150,11 +150,11 @@ def persist_root_with_rag_rollback(
 
     logger.error(f"Failed to persist final file metadata for user {username}")
                 
-    #surely there is a better way to do this than creating a new instance every time
-    vector_store = get_vector_store()
-
     if indexed_document_id is None:
         return False
+
+    #surely there is a better way to do this than creating a new instance every time
+    vector_store = get_vector_store()
 
     try:
         rollback_succeeded = vector_store.delete_documents(

@@ -67,4 +67,4 @@ def process_file_for_rag(
 
         except Exception as exc:
             logger.error("Failed to process file for RAG: %s", exc)
-            return RAGProcessResult(False, error=str(exc), embedding_model_name=vector_store.embedding_model_name)
+            return RAGProcessResult(False, error=str(exc))
