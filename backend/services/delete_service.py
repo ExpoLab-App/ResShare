@@ -44,11 +44,13 @@ def delete_node(data):
         if node_name not in parent_node.children:
             return jsonify({'message': ErrorCode.NODE_NOT_FOUND.name}), 404
 
-        #TODO: Figure ts out
-        # target_node = parent_node.children[node_name]
-        # document_ids = collect_indexed_document_ids(target_node)
-        # if document_ids and not get_rag_manager().delete_documents(username, document_ids):
-        #     return jsonify({'message': 'RAG_DELETE_FAILED'}), 503
+        
+        target_node = parent_node.children[node_name]
+        document_ids = collect_indexed_document_ids(target_node)
+        qdrant_vector_store = get_vector_store()
+
+        if document_ids and not qdrant_vector_store.delete_documents(username, document_ids):
+            return jsonify({'message': 'RAG_DELETE_FAILED'}), 503
 
         del parent_node.children[node_name]
 

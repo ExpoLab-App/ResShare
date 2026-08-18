@@ -172,6 +172,5 @@ def persist_root_with_rag_rollback(
 
     if not rollback_succeeded:
         logger.error(f"RAG data for document {indexed_document_id} may be orphaned after metadata write failure")
-        return False
 
-    return False
+    return rollback_succeeded

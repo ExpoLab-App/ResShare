@@ -142,7 +142,7 @@ class QDrantVectorStore:
                     must=[
                         models.FieldCondition(
                             key="user_id",
-                            match=models.MatchValue(value=username),
+                            match=models.MatchValue(value=username), #maybe username is not the best identifier, but for now it works
                         )
                     ]
                 ),
