@@ -2,7 +2,7 @@
 import os
 from typing import List, Dict
 import logging
-from backend.rag.embeddings import generate_embeddings
+from backend.rag.embeddings import GeminiEmbeddingClient
 from qdrant_client import QdrantClient, models
 
 logging.basicConfig(level=logging.INFO)
@@ -68,8 +68,8 @@ class QDrantVectorStore:
 
                 texts = [chunk["text"] for chunk in chunks]
                 logger.info("Preparing to add %s chunks for user '%s'", len(texts), username)
-                
-                embeddings = generate_embeddings(texts, embedding_model=self.embedding_model_name, embedding_dimensions=self.embedding_dimension, task_type="RETRIEVAL_DOCUMENT")
+                embedding_client = GeminiEmbeddingClient(self.embedding_model_name, self.embedding_dimension)
+                embeddings = embedding_client.generate_document_embeddings(texts)
                 if embeddings.size == 0:
                     return False
 
@@ -129,7 +129,8 @@ class QDrantVectorStore:
             return []
 
         try:
-            query_embedding = generate_embeddings([query], embedding_model=self.embedding_model_name, embedding_dimensions=self.embedding_dimension, task_type="RETRIEVAL_QUERY")
+            embedding_client = GeminiEmbeddingClient(embedding_model=self.embedding_model_name, embedding_dimensions=self.embedding_dimension)
+            query_embedding = embedding_client.generate_query_embeddings([query])
 
             if query_embedding.size == 0:
                 logger.warning("Query embedding generation failed for user '%s'", username)
