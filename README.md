@@ -35,6 +35,7 @@ ResShare is a decentralized file sharing application that allows users to secure
 
 - Python 3.10+
 - Node.js 16+ and npm
+- uv (preferred)
 - IPFS daemon running locally
 - Qdrant (started automatically by Docker Compose)
 - Gemini API key for document embedding and generated responses
@@ -43,13 +44,14 @@ ResShare is a decentralized file sharing application that allows users to secure
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/NoBugInMyCode/ResShareDeployable.git
-cd ResShareDeployable
+git clone https://github.com/ExpoLab-App/ResShare.git
+cd ResShare
 ```
 
 2. **Install backend dependencies:**
 ```bash
-pip install -r requirements.txt
+cd backend
+uv sync
 ```
 
 3. **Install frontend dependencies:**
