@@ -1,7 +1,7 @@
 import json
 
-from backend.error import ErrorCode
-from backend.file import File
+from backend.utils.error import ErrorCode
+from backend.models.file import File
 
 
 class Node:
