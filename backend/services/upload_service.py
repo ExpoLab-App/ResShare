@@ -157,10 +157,7 @@ def persist_root_with_rag_rollback(
     vector_store = get_vector_store()
 
     try:
-        rollback_succeeded = vector_store.delete_documents(
-            username,
-            [indexed_document_id],
-        )
+        vector_store.delete_documents(username,[indexed_document_id])
     except Exception as exc:
         logger.error(
             "Failed to roll back indexed document %s for user %s: %s",
@@ -168,9 +165,5 @@ def persist_root_with_rag_rollback(
             username,
             exc,
         )
-        rollback_succeeded = False
 
-    if not rollback_succeeded:
-        logger.error(f"RAG data for document {indexed_document_id} may be orphaned after metadata write failure")
-
-    return rollback_succeeded
+    return False

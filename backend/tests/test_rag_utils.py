@@ -20,12 +20,7 @@ class QdrantRAGManagerTest(unittest.TestCase):
     def setUp(self):
         self.manager = self.make_manager(QdrantClient(":memory:"))
 
-        def fake_embeddings(
-            texts,
-            embedding_model=None,
-            embedding_dimensions=3,
-            task_type="RETRIEVAL_DOCUMENT",
-        ):
+        def fake_embeddings(texts):
             vectors = []
             for text in texts:
                 if "alpha" in text:
@@ -36,11 +31,11 @@ class QdrantRAGManagerTest(unittest.TestCase):
                     vectors.append([0.0, 0.0, 1.0])
             return np.array(vectors, dtype=np.float32)
 
-        embedding_patch = patch(
-            "backend.rag.vector_store.generate_embeddings",
-            side_effect=fake_embeddings,
-        )
-        embedding_patch.start()
+        embedding_patch = patch("backend.rag.vector_store.GeminiEmbeddingClient")
+        embedding_client_class = embedding_patch.start()
+        embedding_client = embedding_client_class.return_value
+        embedding_client.generate_document_embeddings.side_effect = fake_embeddings
+        embedding_client.generate_query_embeddings.side_effect = fake_embeddings
         self.addCleanup(embedding_patch.stop)
         self.addCleanup(self.manager.qdrant_client.close)
 
