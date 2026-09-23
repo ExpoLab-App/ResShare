@@ -107,8 +107,7 @@ docker run -d \
   --network resshare \
   -p 5000:5000 \
   -e GOOGLE_API_KEY="your-api-key-here" \
-  -e QDRANT_HOST="resshare-qdrant" \
-  -e QDRANT_PORT="6333" \
+  -e QDRANT_VECTOR_DB_URL="http://resshare-qdrant:6333" \
   -v resshare_ipfs:/root/.ipfs \
   -v resshare_ipfs_cluster:/root/.ipfs-cluster \
   resshare-backend:latest
@@ -374,8 +373,7 @@ By default, the application allows CORS from `http://localhost:5997`. To change 
 |----------------|--------------------------------------|----------|-------------|
 | GOOGLE_API_KEY | Google Gemini API key for RAG chat   | Yes      | None        |
 | FLASK_ENV      | Flask environment (production/debug) | No       | production  |
-| QDRANT_HOST    | Qdrant service hostname              | No       | localhost   |
-| QDRANT_PORT    | Qdrant HTTP port                     | No       | 6333        |
+| QDRANT_VECTOR_DB_URL | Qdrant HTTP URL (use `http://qdrant:6333` in Compose or `http://resshare-qdrant:6333` with Docker CLI) | No | http://localhost:6333 |
 
 ### Persistent Data
 

@@ -23,7 +23,7 @@ Install the project dependencies described in the [README](../README.md), then
 initialize the local IPFS repositories:
 
 ```bash
-cp env.example .env
+cp .env.example .env
 ipfs init
 ipfs-cluster-service init --consensus crdt
 ```
