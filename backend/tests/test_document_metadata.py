@@ -2,8 +2,8 @@ import unittest
 from datetime import datetime
 
 from backend.controller.helpers import get_indexed_file_stats
-from backend.file import File
-from backend.node import Node
+from backend.models.file import File
+from backend.models.node import Node
 
 
 class DocumentMetadataTest(unittest.TestCase):

@@ -1,8 +1,7 @@
 import unittest
 
-from backend.file import File
-from backend.node import Node
-
+from backend.models.file import File
+from backend.models.node import Node
 
 class NodePathTest(unittest.TestCase):
     def test_find_node_by_absolute_path(self):

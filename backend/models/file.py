@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from uuid import uuid4
 
 
 class File:

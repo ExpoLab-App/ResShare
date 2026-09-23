@@ -21,4 +21,5 @@ class ErrorCode(Enum):
     EXCEED_MAX_FILE_SIZE = 17
     FILE_NOT_FOUND = 18
     NOT_LOGGED_IN = 19
+    KV_SERVICE_ERROR = 20
     UNKNOWN_ERROR = 99

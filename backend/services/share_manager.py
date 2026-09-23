@@ -1,8 +1,8 @@
 import json
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from backend.error import ErrorCode
-from backend.node import Node
+from backend.utils.error import ErrorCode
+from backend.models.node import Node
 
 
 class ShareManager:

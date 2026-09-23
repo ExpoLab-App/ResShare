@@ -5,6 +5,10 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 API_URL = os.environ.get('KV_SERVICE_URL')
 STORE_TYPE = os.environ.get('STORAGE_TYPE', 'memory')
 
@@ -56,11 +60,11 @@ class KVService:
                 if response.status_code in [200, 201]:
                     return True
                 else:
-                    print(f"SET ERROR: {response.status_code} - {response.text}")
+                    logger.error(f"SET ERROR: {response.status_code} - {response.text}")
                     return False
                     
             except Exception as e:
-                print(f"SET EXCEPTION: {e}")
+                logger.error(f"SET EXCEPTION: {e}")
                 return False
     
     def get_kv(self, key: str) -> str:
@@ -87,16 +91,16 @@ class KVService:
                             data = response.json()
                             return data.get('value', '')
                         except json.JSONDecodeError as e:
-                            print(f"JSON Decode Error: {e}")
+                            logger.error(f"JSON Decode Error: {e}")
                             return response.text
                     else:
                         return ""
                 else:
-                    print(f"GET ERROR: {response.status_code} - {response.text}")
+                    logger.error(f"GET ERROR: {response.status_code} - {response.text}")
                     return ""
                     
             except Exception as e:
-                print(f"GET EXCEPTION: {e}")
+                logger.error(f"GET EXCEPTION: {e}")
                 return ""
 
 _kv_service = KVService(store_type=STORE_TYPE)

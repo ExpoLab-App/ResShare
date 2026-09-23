@@ -1,10 +1,10 @@
 from flask import jsonify, session
-from backend.RSDB_kv_service import get_kv, set_kv
-from backend.error import ErrorCode
-from backend.node import Node
-from backend.share_manager import ShareManager
+from backend.storage.kv import get_kv, set_kv
+from backend.utils.error import ErrorCode
+from backend.models.node import Node
+from backend.services.share_manager import ShareManager
 from backend.controller.helpers import collect_indexed_document_ids
-from backend.rag_utils import get_rag_manager
+from backend.rag.vector_store import get_vector_store
 
 
 def _load_root(username: str):
@@ -44,9 +44,12 @@ def delete_node(data):
         if node_name not in parent_node.children:
             return jsonify({'message': ErrorCode.NODE_NOT_FOUND.name}), 404
 
+        
         target_node = parent_node.children[node_name]
         document_ids = collect_indexed_document_ids(target_node)
-        if document_ids and not get_rag_manager().delete_documents(username, document_ids):
+        qdrant_vector_store = get_vector_store()
+
+        if document_ids and not qdrant_vector_store.delete_documents(username, document_ids):
             return jsonify({'message': 'RAG_DELETE_FAILED'}), 503
 
         del parent_node.children[node_name]
@@ -69,3 +72,21 @@ def delete_node(data):
 
         return jsonify({'message': result.name,
                         'share_list': share_manager.resolve_for_client(_load_root)}), 200
+
+def delete_user_data(username: str) -> bool:
+    """
+    Deletes all user data, including files and RAG data.
+    Returns True if successful, False otherwise.
+    """
+    root = _load_root(username)
+    has_indexed_documents = bool(root and collect_indexed_document_ids(root))
+    qdrant_vector_store = get_vector_store()
+    if has_indexed_documents:
+        if not qdrant_vector_store.delete_user_data(username):
+            return False
+
+    set_kv(username, "\n")
+    set_kv(username + " ROOT", "\n")
+    set_kv(username + " SHARE_MANAGER", "\n")
+
+    return True

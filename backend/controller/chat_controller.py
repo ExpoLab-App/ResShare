@@ -6,14 +6,13 @@ from backend.controller.helpers import (
     login_required,
     route_logger,
 )
-from backend.rag_utils import get_llm_integration, get_rag_manager
-
+from backend.services.answer_service import GeminiGenerationClient
+from backend.rag.retrieval import search
 
 def register_chat_routes(app, logger):
     @app.route('/chat', methods=['POST'])
     @login_required
     def chat_route():
-
         try:
             data = request.get_json()
 
@@ -26,8 +25,8 @@ def register_chat_routes(app, logger):
 
             username = session['username']
 
-            rag_manager = get_rag_manager()
-            relevant_chunks = rag_manager.search_user_vector_db(username, query, top_k=5)
+            relevant_chunks = search(username, query, top_k=5)
+            #TODO: Implement reranking and more sophisticated answer generation
 
             if not relevant_chunks:
                 return jsonify({
@@ -36,8 +35,8 @@ def register_chat_routes(app, logger):
                     'chunks_found': 0
                 }), 200
 
-            llm_integration = get_llm_integration()
-            answer = llm_integration.generate_answer(query, relevant_chunks)
+            generation_client = GeminiGenerationClient("gemini-2.5-flash")
+            answer = generation_client.generate_answer(query, relevant_chunks)
 
             sources = []
             seen_files = set()

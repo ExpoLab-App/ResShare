@@ -23,18 +23,19 @@ ResShare is a decentralized file sharing application that allows users to secure
 
 - **Frontend**: React.js with Material-UI
 - **Backend**: Python Flask
-- **Storage**: ResilientDB for Metadata storage and IPFS for File Storage
+- **Storage**: ResilientDB for Metadata storage, IPFS for File Storage, QDrant for Vector Storage
 - **Authentication**: Session-based authentication
 - **AI/ML**: 
-  - Google Gemini for embeddings
+  - Google Gemini for embedding generation
   - Qdrant for persistent vector search
-  - Gemini 2.5 Flash or an extractive fallback for response generation
+  - Gemini 2.5 Flash for response generation
   - LangChain for text processing
 
 ## Prerequisites
 
 - Python 3.10+
 - Node.js 16+ and npm
+- uv (preferred)
 - IPFS daemon running locally
 - Qdrant (started automatically by Docker Compose)
 - Gemini API key for document embedding and generated responses
@@ -43,13 +44,14 @@ ResShare is a decentralized file sharing application that allows users to secure
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/NoBugInMyCode/ResShareDeployable.git
-cd ResShareDeployable
+git clone https://github.com/ExpoLab-App/ResShare.git
+cd ResShare
 ```
 
 2. **Install backend dependencies:**
 ```bash
-pip install -r requirements.txt
+cd backend
+uv sync
 ```
 
 3. **Install frontend dependencies:**
@@ -73,7 +75,7 @@ docker compose up --build
 ```
 
 To run IPFS, IPFS Cluster, Qdrant, Flask, and React as separate local processes,
-follow the [manual local development guide](development.md).
+follow the [manual local development guide](docs/development.md).
 
 2. **Start the frontend development server:**
 ```bash

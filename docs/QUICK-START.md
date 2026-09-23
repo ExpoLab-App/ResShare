@@ -18,9 +18,9 @@ docker compose logs -f
 curl http://localhost:5000/
 ```
 
-## Manual Local Development
+## Local Development
 
-See the dedicated [local development guide](../development.md) for the complete
+See the dedicated [local development guide](../docs/development.md) for the complete
 manual startup flow for IPFS, IPFS Cluster, Qdrant, Flask, and React.
 
 ## AWS EC2 Deployment (30 Minutes)
