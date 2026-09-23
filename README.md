@@ -23,12 +23,12 @@ ResShare is a decentralized file sharing application that allows users to secure
 
 - **Frontend**: React.js with Material-UI
 - **Backend**: Python Flask
-- **Storage**: ResilientDB for Metadata storage and IPFS for File Storage
+- **Storage**: ResilientDB for Metadata storage, IPFS for File Storage, QDrant for Vector Storage
 - **Authentication**: Session-based authentication
 - **AI/ML**: 
-  - Google Gemini for embeddings
+  - Google Gemini for embedding generation
   - Qdrant for persistent vector search
-  - Gemini 2.5 Flash or an extractive fallback for response generation
+  - Gemini 2.5 Flash for response generation
   - LangChain for text processing
 
 ## Prerequisites

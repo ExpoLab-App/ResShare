@@ -74,7 +74,7 @@ class GeminiGenerationClient:
                     }
                 }
         
-
+    @staticmethod
     def _build_prompt(context_chunks: List[Dict], query: str):
         context_text = "\n\n".join([
                     f"From {chunk['chunk']['metadata']['filename']}:\n{chunk['chunk']['text']}"
