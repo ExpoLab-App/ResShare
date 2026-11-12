@@ -284,3 +284,45 @@ ignored `.env`, datasets, training artifacts, or model weights; transfer or
 download those separately. Existing Gemini-indexed documents need reindexing.
 Container changes were inspected and Compose configuration validated; a full
 Apple Silicon image build and live Mac inference still require verification.
+
+
+## Hugging Face export (2026-11-12)
+
+Both final checkpoints were downloaded from Together job `ft-e80205d9-8b8a`:
+
+| Archive | Bytes | SHA256 |
+| --- | ---: | --- |
+| Merged | 15,052,416,622 | `9bcdeeb77deea090cd3586e1ea5d96a2322d5cd2f9dc0c198d8691a18ec54b37` |
+| Adapter | 164,079,919 | `56dec74438a23fde0a18c6a4618ba278350742d6881ef34d6d52a9ebcb01938d` |
+
+Local exports are under ignored `artifacts/export/`. Safe archive extraction
+rejected links and unsafe paths. All four merged safetensors shards were checked
+against the weight index: 775 tensors, 19,306,216,416 tensor bytes, 727 BF16 and
+48 F32 tensors. Header offsets and file sizes agree. AutoConfig and AutoTokenizer
+load locally; non-thinking template rendering passes. Token IDs match the pinned
+preparation tokenizer on 10 validation examples. This verifies file structure
+and tokenizer behavior, not full model loading or generation quality.
+
+Publication target: `devangb4/Qwen3.5-9B-ResShare`. Root files contain the merged
+Hugging Face checkpoint, with the original LoRA export under `adapter/`. The
+adapter configuration retains the provider base identifier
+`togethercomputer/Qwen3.5-9B`; standalone adapter loading has not been verified.
+The model card includes training settings, dataset attribution, upstream license,
+shared prompt, and evaluation limitations. No credentials, datasets, or trainer
+state are included. `file_manifest.json` records publication file sizes and
+SHA256 hashes. Publication completed successfully. Remote file sizes and all LFS SHA256
+hashes match the local manifest, and anonymous API access confirms the model
+is public. Revision: `0580ebf5de43f19d3b024df9c7355cef090fef4d`.
+
+Public repository: https://huggingface.co/devangb4/Qwen3.5-9B-ResShare
+
+Download on the Mac without a Together key:
+
+```bash
+hf download devangb4/Qwen3.5-9B-ResShare \
+  --revision 0580ebf5de43f19d3b024df9c7355cef090fef4d \
+  --local-dir Qwen3.5-9B-ResShare
+```
+
+This is an unquantized Hugging Face checkpoint, not a GGUF or MLX package. Mac
+conversion, quantization, and inference testing remain outstanding.
