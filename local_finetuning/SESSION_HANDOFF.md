@@ -265,3 +265,22 @@ python -m unittest local_finetuning.test_workflow -v
 8. Adopt the tuned model only if it meets the plan's quality criteria. Keep baseline weights and rollback evidence. Validation loss alone is insufficient to decide adoption.
 
 No completion claim should be made for artifact conversion, Mac inference, old-document migration, or answer-quality improvement until these checks actually run.
+
+## Combined Mac demo branch
+
+The combined branch is `feat/presentation-demo-qwen-finetuning`. It merges
+`origin/presentation-demo` at `1be0993` with the local Qwen/BGE implementation
+and this handoff at `cb1c48e`.
+
+The merge preserves the demo's amd64/arm64 container installers, GitHub IPFS
+downloads, and corrected IPFS/cluster health checks. The generation client
+retains explicit model, URL, and timeout constructor options. Qwen endpoint
+defaults (port 8081, model alias `resshare-local`), shared training/inference
+prompt, context budget, and HTTP error handling take precedence over the demo's
+Ollama defaults and error-as-answer behavior. Embeddings use local BGE.
+
+On the Mac, fetch origin and switch to this branch. Git does not transfer the
+ignored `.env`, datasets, training artifacts, or model weights; transfer or
+download those separately. Existing Gemini-indexed documents need reindexing.
+Container changes were inspected and Compose configuration validated; a full
+Apple Silicon image build and live Mac inference still require verification.

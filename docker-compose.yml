@@ -35,7 +35,7 @@ services:
       - ipfs_cluster_data:/root/.ipfs-cluster
     restart: "no"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5000/ && curl -f http://localhost:8080/api/v0/version && curl -f http://localhost:9094/api/v0/id"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/ && curl -fsS -X POST http://localhost:5001/api/v0/version && curl -fsS http://localhost:9094/id"]
       interval: 30s
       timeout: 15s
       retries: 3

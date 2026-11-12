@@ -11,10 +11,11 @@ class GenerationError(RuntimeError):
 
 
 class LocalGenerationClient:
-    def __init__(self):
-        self.url = os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8081/v1").rstrip("/") + "/chat/completions"
-        self.model = os.getenv("LOCAL_LLM_MODEL", "resshare-local")
-        self.timeout = float(os.getenv("LOCAL_LLM_TIMEOUT", "120"))
+    def __init__(self, generation_model: str | None = None,
+                 base_url: str | None = None, timeout: float | None = None):
+        self.url = (base_url or os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8081/v1")).rstrip("/") + "/chat/completions"
+        self.model = generation_model or os.getenv("LOCAL_LLM_MODEL", "resshare-local")
+        self.timeout = float(timeout if timeout is not None else os.getenv("LOCAL_LLM_TIMEOUT", "120"))
         if self.timeout <= 0:
             raise ValueError("LOCAL_LLM_TIMEOUT must be positive")
         # UTF-8 bytes conservatively bound text tokens without loading a second
@@ -44,7 +45,7 @@ class LocalGenerationClient:
         evidence = [{"filename": c["chunk"]["metadata"]["filename"],
                      "text": c["chunk"]["text"]} for c in context_chunks]
         try:
-            response = requests.post(self.url, json={
+            response = requests.post(self.url, headers={"Content-Type": "application/json"}, json={
                 "model": self.model,
                 "messages": messages(query, evidence),
                 "temperature": 0,

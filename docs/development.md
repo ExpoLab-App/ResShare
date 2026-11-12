@@ -31,10 +31,16 @@ ipfs-cluster-service init --consensus crdt
 Set at least these values in `.env`:
 
 ```dotenv
-GOOGLE_API_KEY=your-gemini-api-key-here
+LOCAL_LLM_BASE_URL=http://127.0.0.1:8081/v1
+LOCAL_LLM_MODEL=resshare-local
 FLASK_ENV=development
 STORAGE_TYPE=memory
 ```
+
+Embeddings run locally with FastEmbed BGE small en v1.5. Chat answers come from
+the separately started model at `LOCAL_LLM_BASE_URL`. See
+[the local model runbook](../local_finetuning/README.md) for setup and reindexing.
+Compose defaults to `http://host.docker.internal:8081/v1` to reach the host.
 
 For ResilientDB-backed metadata instead of process-local memory, use:
 
