@@ -158,7 +158,7 @@ for i in {1..30}; do
     fi
 
     # Check if cluster is responding
-    if curl -s http://localhost:9094/api/v0/id > /dev/null 2>&1; then
+    if curl -fsS --max-time 2 http://localhost:9094/id > /dev/null 2>&1; then
         echo "✓ IPFS Cluster is ready!"
         CLUSTER_READY=true
         break
@@ -182,7 +182,7 @@ fi
 
 # Check cluster status
 echo "Checking IPFS Cluster status..."
-CLUSTER_STATUS=$(curl -s http://localhost:9094/api/v0/id)
+CLUSTER_STATUS=$(curl -fsS http://localhost:9094/id)
 if echo "$CLUSTER_STATUS" | grep -q "id"; then
     echo "IPFS Cluster status OK"
     echo "$CLUSTER_STATUS" | head -20

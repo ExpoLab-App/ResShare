@@ -32,9 +32,15 @@ Set at least these values in `.env`:
 
 ```dotenv
 GOOGLE_API_KEY=your-gemini-api-key-here
+LOCAL_LLM_BASE_URL=http://127.0.0.1:11434/v1
+LOCAL_LLM_MODEL=llama3.2
 FLASK_ENV=development
 STORAGE_TYPE=memory
 ```
+
+`GOOGLE_API_KEY` is used for document embeddings. Chat answers come from the
+local model at `LOCAL_LLM_BASE_URL`. With Ollama, run `ollama pull llama3.2`
+before asking a question.
 
 For ResilientDB-backed metadata instead of process-local memory, use:
 

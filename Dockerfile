@@ -26,8 +26,18 @@ RUN apt-get update && apt-get install -y \
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
-# Install Miniconda
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh \
+# Install Miniconda for the image architecture.
+# On Apple Silicon, Docker builds linux/arm64 by default. The x86_64 installer
+# is an amd64 ELF, and Rosetta exits 133 because the arm64 image has no
+# /lib64/ld-linux-x86-64.so.2.
+ARG TARGETARCH
+RUN set -eu; \
+    case "${TARGETARCH}" in \
+      amd64) MINICONDA_ARCH=x86_64 ;; \
+      arm64) MINICONDA_ARCH=aarch64 ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    wget "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${MINICONDA_ARCH}.sh" -O /tmp/miniconda.sh \
     && bash /tmp/miniconda.sh -b -p /opt/conda \
     && rm /tmp/miniconda.sh
 
@@ -44,19 +54,26 @@ RUN conda create --name reschat_venv python=3.10 -y
 # Make RUN commands use the conda environment
 SHELL ["conda", "run", "-n", "reschat_venv", "/bin/bash", "-c"]
 
-# Install IPFS
-RUN wget https://dist.ipfs.tech/kubo/v0.29.0/kubo_v0.29.0_linux-amd64.tar.gz \
-    && tar -xvzf kubo_v0.29.0_linux-amd64.tar.gz \
+# Install IPFS from the GitHub release. dist.ipfs.tech refuses connections.
+ARG TARGETARCH
+RUN curl -fL --retry 5 --retry-delay 2 \
+      -o "kubo_v0.29.0_linux-${TARGETARCH}.tar.gz" \
+      "https://github.com/ipfs/kubo/releases/download/v0.29.0/kubo_v0.29.0_linux-${TARGETARCH}.tar.gz" \
+    && tar -xvzf "kubo_v0.29.0_linux-${TARGETARCH}.tar.gz" \
     && cd kubo \
     && bash install.sh \
     && cd .. \
-    && rm -rf kubo kubo_v0.29.0_linux-amd64.tar.gz
+    && rm -rf kubo "kubo_v0.29.0_linux-${TARGETARCH}.tar.gz"
 
-# Install IPFS Cluster Service
-RUN wget https://dist.ipfs.tech/ipfs-cluster-service/v1.1.4/ipfs-cluster-service_v1.1.4_linux-amd64.tar.gz \
-    && tar -xvzf ipfs-cluster-service_v1.1.4_linux-amd64.tar.gz \
+# Install IPFS Cluster Service. v1.1.4 published binaries only on dist.ipfs.tech
+# and that GitHub release has no assets. v1.1.6 has no config or API changes.
+ARG TARGETARCH
+RUN curl -fL --retry 5 --retry-delay 2 \
+      -o "ipfs-cluster-service_v1.1.6_linux-${TARGETARCH}.tar.gz" \
+      "https://github.com/ipfs-cluster/ipfs-cluster/releases/download/v1.1.6/ipfs-cluster-service_v1.1.6_linux-${TARGETARCH}.tar.gz" \
+    && tar -xvzf "ipfs-cluster-service_v1.1.6_linux-${TARGETARCH}.tar.gz" \
     && mv ipfs-cluster-service/ipfs-cluster-service /usr/local/bin/ \
-    && rm -rf ipfs-cluster-service ipfs-cluster-service_v1.1.4_linux-amd64.tar.gz
+    && rm -rf ipfs-cluster-service "ipfs-cluster-service_v1.1.6_linux-${TARGETARCH}.tar.gz"
 
 # Initialize IPFS (will be done in entrypoint for proper data persistence)
 # We'll initialize it in the entrypoint script to handle volumes properly

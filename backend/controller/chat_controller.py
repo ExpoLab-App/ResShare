@@ -6,7 +6,7 @@ from backend.controller.helpers import (
     login_required,
     route_logger,
 )
-from backend.services.answer_service import GeminiGenerationClient
+from backend.services.answer_service import LocalGenerationClient
 from backend.rag.retrieval import search
 
 def register_chat_routes(app, logger):
@@ -35,7 +35,7 @@ def register_chat_routes(app, logger):
                     'chunks_found': 0
                 }), 200
 
-            generation_client = GeminiGenerationClient("gemini-2.5-flash")
+            generation_client = LocalGenerationClient()
             answer = generation_client.generate_answer(query, relevant_chunks)
 
             sources = []
