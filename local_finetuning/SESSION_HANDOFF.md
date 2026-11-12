@@ -326,3 +326,145 @@ hf download devangb4/Qwen3.5-9B-ResShare \
 
 This is an unquantized Hugging Face checkpoint, not a GGUF or MLX package. Mac
 conversion, quantization, and inference testing remain outstanding.
+
+## Mac download, conversion, and tuned inference (2026-11-12)
+
+This section supersedes the Mac-conversion status above. Downloaded the public
+Hugging Face repository at revision
+`0580ebf5de43f19d3b024df9c7355cef090fef4d` into ignored
+`artifacts/hf/ResShare/`, including the original adapter. All 26 publication
+manifest entries passed size and SHA256 checks, totaling 19,522,515,422 bytes.
+LFS hashes also match the anonymous Hugging Face API metadata. The exported
+prompt is byte-identical to `backend/rag/prompts.py`; tokenizer loading and
+non-thinking template rendering passed locally.
+
+Used the installed llama.cpp 0.9.0/build 12110 and matching source commit
+`cd959bae99ff4bed22bef2604f45241c09bbb8c8`. Converter dependencies are isolated
+in `/tmp/resshare-gguf-venv`; exact versions are recorded in
+`artifacts/hf/converter-versions.json`. Converted with `--outtype f16 --no-mtp`,
+then quantized with `llama-quantize ... Q4_K_M 4`. Omitting MTP matches the
+original baseline's 32 blocks; all 427 text tensor names and dimensions agree.
+
+- `artifacts/resshare-f16.gguf`: 17,920,697,760 bytes; SHA256
+  `757b6dab6e1cea38fff5f5844df39d46d2277610b880320fe1dd9e1d4e230694`.
+- `artifacts/resshare-Q4_K_M.gguf`: 5,629,109,664 bytes; SHA256
+  `d23db1d14dd13a8cf76e5bfaa167bcabce747f1d5a8a500b3b7c5723a0f4f47e`.
+
+Conversion succeeded in about 48 seconds. Its timing wrapper could not collect
+kernel counters inside the sandbox, so that wrapper returned nonzero after the
+converter's success; independent GGUF parsing/tensor checks passed. Quantization
+completed with exit status zero in about 76 seconds, with measured maximum RSS
+6,937,427,968 bytes. This is quantization memory, not inference peak memory.
+
+Stopped only the baseline model process and started the tuned GGUF on
+`127.0.0.1:8081`, alias `resshare-local`, Metal, one slot, 8K context, thinking
+disabled. The baseline GGUF remains available for rollback. These checks used
+a temporary isolated demo stack, since removed in favor of the application's
+default stack (UI port 5997, backend port 5000, Qdrant port 6333).
+Docker reaches the host model through `host.docker.internal`. Model
+artifacts/tooling are excluded from the Docker context.
+
+Matched synthetic smoke comparison: six cases passed for both baseline and
+tuned models. Cases cover supported facts, absent facts, unrelated questions,
+multiple documents, and a malicious instruction embedded in evidence. Tuned
+requests took 0.465–1.380 seconds; the sample is too small and synthetic to
+establish better quality or representative performance. Fixed-context outputs,
+references, and latencies are in `artifacts/mac-smoke/`. No frozen test data was
+used; those original reviewed validation/test files remain absent on this Mac.
+
+The tuned model also passed a fresh authenticated API upload test: real
+IPFS storage/download, BGE encoding, persistent server Qdrant retrieval, grounded
+answer, correct source filename, absent-fact abstention, cross-user isolation,
+and skip-AI exclusion. Evidence: `artifacts/mac-smoke/tuned-app.json`.
+Final health checks confirmed the tuned model path and HTTP 200 for model,
+backend, and frontend; model RSS at that snapshot was 6,277,456 KiB, which is
+not a peak or a complete unified-memory measurement. Interactive browser
+verification remains pending. All 37 backend and eight workflow tests passed.
+
+Restart using the README's Mac inference setup section. The temporary demo
+used memory account/file metadata, which reset on backend restart. User explicitly
+excluded migration of existing uploads; no existing documents were migrated.
+Remaining work: frozen-data transfer and the 50-question evaluation, independent
+human review, representative performance/memory checks, and final cloud billing
+verification. No new training job or hosted inference endpoint was created.
+
+## Frozen 50-question comparison completed (2026-11-12)
+
+Regenerated `data/reviewed-v1/` using the exact source/model revisions, seed 42,
+and tracked exclusions. All three previously recorded SHA256 hashes match:
+reviewed train, validation, and frozen test. Structural quotas, disjoint groups,
+token counts, and prompt parity pass. Evidence:
+`artifacts/evaluation/frozen-reconstruction.json` and `data-audit.json`.
+
+Ran all 50 original test questions on each local GGUF with the same shared
+prompt, greedy decoding, 512 output tokens, thinking disabled, 8K context,
+one slot, and llama.cpp revision. Tuned ran first; baseline was then restarted
+on the same port. All 100 requests completed with no infrastructure,
+truncation, or reasoning-trace errors. The evaluator now preserves raw answer,
+finish reason, reasoning field, timings, and category before classifying errors.
+
+Codex reviewed all 50 pairs against complete contexts and references with model
+identities randomly hidden per question. Scores were locked before unblinding.
+This was agent review, not independent human review; human fields remain null.
+Raw outputs: `artifacts/evaluation/baseline.jsonl` and `tuned.jsonl`.
+Rubric, blinded answers, locked scores, mapping, reviewed results, summary, and
+runtime samples are saved in that same ignored directory.
+
+Agent-rated correctness: tuned 47/50, baseline 41/50. On answerable cases:
+tuned 34/37, baseline 35/37. Appropriate abstention: tuned 13/13, baseline 6/13.
+False abstentions: tuned 3/37, baseline zero. Answers with unsupported claims:
+tuned zero, baseline five. Valid explicit false-premise corrections counted as
+semantic abstentions; exact string matching was not the quality score.
+
+Flagged reference cases (zero-based indices 23, 26, 34): clause terminology
+ambiguity, an underdetermined negative date question, and generic hotel-site
+navigation incorrectly attributed to local Hyatt properties. Excluding them
+gives tuned 45/47, baseline 41/47; false abstentions remain tuned 2/36 versus
+baseline zero. The clear tuned refusals are indices 3 and 6: spinal cord
+damage causing paraplegia, and a treaty issue described as politicized.
+Two further response-wording ambiguities (indices 24 and 48) are recorded in
+the review notes without silently changing the frozen data or outputs.
+
+Median response time: tuned 1.658 seconds, baseline 2.840 seconds. P95 nearest
+rank: tuned 7.533 seconds, baseline 12.905 seconds. Decode throughput was about
+21.9 versus 21.8 tokens/second; tuned generated 1,709 tokens versus baseline
+3,147. Timings are descriptive single passes: tuned already had smoke traffic,
+baseline was freshly restarted, and cache/system conditions varied. Both are
+Q4_K_M, but their calibration provenance differs. No controlled speed claim or
+statistical proof of superiority is established.
+
+Sampled maximum process RSS was 3.225 GiB for tuned and 9.955 GiB for baseline,
+but substantial swap changed during the runs (roughly 9–16 GiB in use).
+These values cannot establish relative memory efficiency, total unified memory,
+or a guaranteed peak. A controlled memory check remains outstanding.
+
+**Initial evaluation decision (superseded below):** baseline retained on port 8081 and made the
+`serve.sh` default because tuned fails the pre-recorded no-increase-in-false-
+abstentions gate. Tuned remains selectable with its explicit GGUF path. The
+baseline passed a fresh authenticated full-app upload/retrieval/answer/source,
+abstention, user-isolation, IPFS download, and AI-skip check after evaluation.
+Both GGUFs and all previous smoke evidence remain intact. No existing-document
+migration, training run, or hosted model endpoint was started.
+
+An interactive comparison is saved in this workspace's managed Canvas
+directory as `local-inference-evaluation.canvas.tsx`, with all individual
+answers, evidence, review notes, and a reference-case sensitivity control.
+Its TypeScript check passed. Remaining work is independent human review,
+controlled performance/memory and interactive browser verification, and final
+cloud billing verification. Future model/prompt changes should use validation
+data rather than these now-inspected test answers.
+
+## Fine-tuned application default (2026-11-12)
+
+At the user's explicit request, `serve.sh` now defaults to
+`artifacts/resshare-Q4_K_M.gguf`. The default application's local `.env` selects
+`http://host.docker.internal:8081/v1` with alias `resshare-local`, replacing its
+previous Ollama `llama3.2` configuration. This deployment choice supersedes the
+baseline-default decision above; evaluation results are unchanged. The baseline
+can still be selected by passing its GGUF path explicitly. Use the default
+application stack and frontend on ports 5000 and 5997.
+
+Started the fine-tuned server and recreated only the default backend container.
+Verification from inside that container confirmed `/props` reports the tuned
+GGUF path and the application's `LocalGenerationClient` returns the expected
+answer for a supplied synthetic document. No separate application stack was used.

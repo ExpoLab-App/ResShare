@@ -71,6 +71,12 @@ export LOCAL_LLM_MODEL="resshare-local"
 ## Running the Application
 
 1. **Start the backend, IPFS services, and Qdrant:**
+Start the ResShare fine-tuned model in a separate terminal:
+```bash
+bash local_finetuning/serve.sh
+```
+
+Then start the application stack:
 ```bash
 docker compose up --build
 ```

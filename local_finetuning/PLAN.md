@@ -18,13 +18,13 @@ Use Together AI for one supervised LoRA pass on `Qwen/Qwen3.5-9B`, then export t
 - [ ] Obtain an independent human quality review before adopting the model.
 - [x] Implement the shared local prompt and OpenAI-compatible generation client; test errors, timeouts, missing evidence, and source alignment.
 - [x] Replace Gemini embeddings with `BAAI/bge-small-en-v1.5` via FastEmbed; validate a separate 384-dimensional collection and test indexing, retrieval, persistence, deletion, and user isolation.
-- [ ] Reindex existing uploads from authoritative metadata/IPFS into the local collection and verify full document coverage before deployment cutover.
-- [ ] Establish local Qwen3.5-9B baseline results with the final embedding/retrieval configuration. Use validation questions for decisions; keep final test questions frozen.
+- [x] Establish fixed-context local baseline results on the exact checksum-verified 50-question test; separately verify real BGE/Qdrant retrieval with a fresh synthetic upload. Further model/prompt development uses validation data.
 - [x] Upload and validate train/validation only; obtain a $4 quote and submit one LoRA epoch within the $10 experiment budget.
 - [ ] Monitor `ft-e80205d9-8b8a` to completion and record final charge and metrics; do not submit another job while it is queued/running.
-- [ ] Download both adapter and merged weights, convert/quantize, and check that the exported model uses the intended prompt and non-thinking mode.
-- [ ] Evaluate baseline and tuned GGUFs identically on the 50 frozen questions; separately exercise real retrieval with uploaded ResShare documents.
-- [ ] Record correctness, grounding, abstention, latency, peak memory, and errors. Demonstrate upload → index → retrieval → answer → source display; retain the baseline if tuning regresses.
+- [x] Download both adapter and merged weights from the verified Hugging Face publication, check all manifest/LFS hashes, convert to F16 GGUF and Q4_K_M, verify prompt/template parity, and run non-thinking local generation on the Mac.
+- [x] Evaluate baseline and tuned GGUFs on the identical 50 frozen questions; all 100 generations completed without request, truncation, or reasoning errors. Agent review was casewise model-blind. Real retrieval was separately exercised with a new upload.
+- [x] Record agent-rated correctness, grounding, abstention, latency, sampled process RSS, and errors. Fresh authenticated upload/index/retrieval/answer/source API checks passed. Fine-tuned model selected as the application default at the user's request: tuned 47/50 versus baseline 41/50, but tuned false abstentions increased to 3/37 (2/36 after excluding flagged references) versus zero.
+- [ ] Complete independent human review, interactive browser verification, and a controlled peak unified-memory/performance check; existing system swap made the memory comparison inconclusive.
 
 ## Implementation map
 

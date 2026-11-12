@@ -35,6 +35,7 @@ def main():
             result = {
                 "id": row["id"], "question": row["question"], "references": row["answers"],
                 "answerable": row["answerable"], "model": args.model, "artifact": args.artifact,
+                "category": row.get("category"),
                 "prompt_version": PROMPT_VERSION,
                 "input_sha256": hashlib.sha256(args.input.read_bytes()).hexdigest(),
                 "human_correct": None, "human_grounded": None, "human_appropriate_abstention": None,
@@ -49,10 +50,15 @@ def main():
                 payload = response.json()
                 choice = payload["choices"][0]
                 answer = choice["message"]["content"]
+                result.update(answer=answer, finish_reason=choice.get("finish_reason"),
+                              reasoning_content=choice["message"].get("reasoning_content"),
+                              usage=payload.get("usage"), timings=payload.get("timings"))
                 if not isinstance(answer, str) or not answer.strip():
                     raise ValueError("Missing or empty answer")
                 if choice.get("finish_reason") != "stop":
                     raise ValueError(f"Incomplete generation: {choice.get('finish_reason')}")
+                if "<think>" in answer or "</think>" in answer or result["reasoning_content"]:
+                    raise ValueError("Unexpected reasoning trace in non-thinking generation")
                 result.update(answer=answer, usage=payload.get("usage"),
                               exact_abstention=answer.strip() == ABSTENTION, error=None)
             except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as exc:

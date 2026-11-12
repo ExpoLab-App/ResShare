@@ -2,7 +2,118 @@
 
 For the full session history, training results, evidence locations, and remaining work, see [SESSION_HANDOFF.md](SESSION_HANDOFF.md).
 
-Start with [PLAN.md](PLAN.md). This folder prepares **Qwen3.5-9B + Together LoRA + local Mac inference**. The backend now uses local generation and BGE embeddings; deployment cutover and reindexing of existing uploads remain operational steps. Commands below run from the repository root unless stated otherwise.
+Start with [PLAN.md](PLAN.md). This folder implements **Qwen3.5-9B + Together LoRA + local inference**. The frozen-set comparison is complete. The ResShare fine-tune is the application default at the user's request; the baseline remains available for explicit selection. Existing-document migration is excluded from the current task. Commands below run from the repository root unless stated otherwise.
+
+## Frozen-set comparison
+
+Reconstructed the original reviewed data from the pinned revisions and seed.
+Train, validation, and test match all three recorded SHA256 hashes exactly;
+the structural split audit passes. The test file contains the original 50
+questions: 25 Neural Bridge, 12 answerable SQuAD, and 13 unanswerable SQuAD.
+No newly sampled substitute questions were used.
+
+Both Q4_K_M models answered all 50 with the same prompt, context window,
+temperature, output limit, and non-thinking mode. There were zero request,
+truncation, or reasoning-trace errors. Codex reviewed all paired answers with
+model identities randomly hidden per question and locked judgments before
+unblinding. This is agent review; independent human review is still pending.
+
+- Correct: tuned **47/50**, baseline **41/50**.
+- Appropriate abstention on unanswerable questions: tuned **13/13**, baseline **6/13**. Explicit false-premise corrections count, even without the exact abstention string.
+- Answers with unsupported factual claims: tuned **0/50**, baseline **5/50**.
+- False abstentions on labeled-answerable questions: tuned **3/37**, baseline **0/37**.
+- Median response time: tuned **1.658 s**, baseline **2.840 s**. Both decoded around **22 tokens/s**; tuned output totaled 1,709 tokens versus 3,147 for baseline. These are descriptive single-pass times, affected by response length, cache state, and system load.
+
+Three references/labels are flagged: interchangeable clause terminology, an
+underdetermined negated date question, and hotel-site navigation attributed to
+specific Hyatt properties. Excluding those cases gives tuned **45/47** versus
+baseline **41/47**, with tuned **2/36** false abstentions versus baseline **0/36**.
+The two clear tuned refusals concern the explicit spinal-damage cause of
+paraplegia and an explicit description of a treaty dispute as politicized.
+The complete passages, outputs, review notes, and sensitivity flags are in
+`artifacts/evaluation/reviewed-results.json`; summary counts are in
+`artifacts/evaluation/summary.json`. Raw outputs and runtime samples are saved
+alongside them. Human-score fields in raw results remain unset.
+
+**Deployment choice:** use the fine-tuned model by default at the user's request.
+The tuned model improves the pilot's overall score and caution but does not pass
+the original gate requiring no increase in false abstentions. Both weights
+remain available. Substantial system swap during the sequential runs prevents
+a clean memory-efficiency comparison; sampled process RSS is not total unified
+memory or a guaranteed peak. Baseline and tuned quantization share Q4_K_M but
+have different calibration provenance. Fifty cases and one agent reviewer do
+not establish statistical superiority. Use validation data for further model
+or prompt development, not these now-inspected test answers.
+
+## Inference setup
+
+The published checkpoint is available through HuggingFace at
+`devangb4/Qwen3.5-9B-ResShare`, pinned revision. It is downloaded to
+`local_finetuning/artifacts/hf/ResShare/`, including the adapter. All 26
+publication-manifest entries (19,522,515,422 bytes) match their expected sizes
+and SHA256 hashes; the LFS hashes also match the Hugging Face API metadata.
+The published prompt equals the backend prompt byte for byte, and the exported
+tokenizer loads with non-thinking template rendering.
+
+The fine-tuned Q4_K_M GGUF is **5,629,109,664 bytes**, SHA256
+`d23db1d14dd13a8cf76e5bfaa167bcabce747f1d5a8a500b3b7c5723a0f4f47e`.
+It is the default model selected by `serve.sh`, served on
+`127.0.0.1:8081` as `resshare-local`, using Metal, one slot,
+8K context, and non-thinking generation. Six matched synthetic cases passed
+for both baseline and tuned models, including missing facts and an instruction
+embedded in a document. Tuned requests took 0.465–1.380 seconds in that smoke
+run. Authenticated API checks passed for upload, real BGE/Qdrant retrieval,
+grounded generation, source filenames, abstention, user isolation, IPFS
+download, and skipped indexing. These checks do not establish a quality gain.
+The UI compiled and serves HTTP; interactive browser verification is pending.
+
+Artifact hashes and settings are in `artifacts/hf/conversion-provenance.json`;
+download verification is in `artifacts/hf/download-verification.json`. Live
+check evidence is in `artifacts/mac-smoke/`. Model weights and these generated
+files are intentionally ignored by Git.
+
+The converter source is pinned to the installed llama.cpp 0.9.0/build 12110
+commit `cd959bae99ff4bed22bef2604f45241c09bbb8c8` under ignored
+`artifacts/llama.cpp/`. Dependencies are in `/tmp/resshare-gguf-venv`, separate
+from the app; resolved versions are in `artifacts/hf/converter-versions.json`.
+Conversion commands:
+
+```bash
+OMP_NUM_THREADS=4 /tmp/resshare-gguf-venv/bin/python \
+  local_finetuning/artifacts/llama.cpp/convert_hf_to_gguf.py \
+  local_finetuning/artifacts/hf/ResShare \
+  --outfile local_finetuning/artifacts/resshare-f16.gguf --outtype f16 --no-mtp
+llama-quantize local_finetuning/artifacts/resshare-f16.gguf \
+  local_finetuning/artifacts/resshare-Q4_K_M.gguf Q4_K_M 4
+```
+
+`--no-mtp` omits the extra next-token prediction head, matching the baseline
+GGUF's 32 blocks and 427 text tensors. Vision weights are not needed for this
+text Q&A demo. Keep the original checkpoint and baseline weights as rollback.
+
+Start the model, application stack, and UI in separate terminals:
+
+```bash
+# ResShare fine-tuned model (default)
+bash local_finetuning/serve.sh
+
+# Default backend/IPFS/Qdrant stack
+docker compose up -d --build
+
+# UI at http://localhost:5997, backend at http://localhost:5000
+npm --prefix frontend start
+```
+
+Create a new account and upload a new document. Existing-document migration is
+excluded at the user's request. Local model inference uses the application's
+default Compose stack and frontend; no separate demo stack is needed.
+
+To return to the baseline, stop the tuned server with Ctrl-C, then run:
+
+```bash
+bash local_finetuning/serve.sh \
+  local_finetuning/artifacts/baseline/Qwen3.5-9B-Q4_K_M.gguf
+```
 
 ## Contents and current status
 
@@ -13,9 +124,9 @@ Start with [PLAN.md](PLAN.md). This folder prepares **Qwen3.5-9B + Together LoRA
 - `audit_data.py`: verifies quotas, split isolation, hashes, prompt parity, and frozen validation/test files.
 - `test_workflow.py`: offline split/normalization/prompt checks.
 
-Local dataset preparation completed on 2026-11-11: 6,000 training, 300 validation, and 50 test records. Structural checks passed for quotas, token limits, split isolation, hashes, and assistant-only loss weights; eight preparation tests and 31 backend tests pass. See ignored `data/reviewed-v1/manifest.json` and `artifacts/reviewed-data-audit.json`. Codex reviewed 60 training samples and rejected four; independent human review remains pending. The reviewed training files are in `data/reviewed-v1/`; their validation/test files match the originals exactly. Use that version for the next steps.
+Local dataset preparation completed on 2026-11-11 and was reproduced exactly on this Mac on 2026-11-12: 6,000 training, 300 validation, and 50 test records. Structural checks passed for quotas, token limits, split isolation, hashes, and assistant-only loss weights; eight preparation tests and 37 backend tests pass. See ignored `data/reviewed-v1/manifest.json` and `artifacts/evaluation/data-audit.json`. Codex reviewed 60 training samples and rejected four; independent human review remains pending. The reviewed training files are in `data/reviewed-v1/`; their validation/test files match the originals exactly. Use that version for further validation work.
 
-One cloud training job has now been submitted: `ft-e80205d9-8b8a`, quoted at **$4**, latest checked state **completed**. Upload validation passed for train/validation; 50 provider-preview rows match local token IDs and assistant-only loss labels without sampled truncation. All 114 steps and validation completed; validation loss was 0.2018. The merged checkpoint and adapter are downloaded and published at [devangb4/Qwen3.5-9B-ResShare](https://huggingface.co/devangb4/Qwen3.5-9B-ResShare); remote sizes and LFS hashes were verified. This is an unquantized Hugging Face checkpoint. Final billing-unit verification, conversion/quantization, and Mac performance checks remain pending. Evidence and configuration are under ignored `artifacts/together/`. Do not submit a duplicate job.
+One cloud training job has now been submitted: `ft-e80205d9-8b8a`, quoted at **$4**, latest checked state **completed**. Upload validation passed for train/validation; 50 provider-preview rows match local token IDs and assistant-only loss labels without sampled truncation. All 114 steps and validation completed; validation loss was 0.2018. The merged checkpoint and adapter are published at [devangb4/Qwen3.5-9B-ResShare](https://huggingface.co/devangb4/Qwen3.5-9B-ResShare); the Mac download matches the manifest and LFS hashes. That repository contains the unquantized checkpoint; the local Q4_K_M conversion, live Mac smoke checks, and frozen 50-question comparison are complete. Final billing-unit verification, independent human quality review, and controlled latency/peak-memory evaluation remain pending. Evidence and configuration are under ignored `artifacts/`. Do not submit a duplicate job.
 
 To check this job using the saved credential file:
 

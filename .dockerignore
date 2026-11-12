@@ -16,6 +16,13 @@ venv/
 env/
 ENV/
 reschat_venv/
+.venv/
+
+# Model weights, conversion tools, and credentials stay on the Mac.
+local_finetuning/.env
+local_finetuning/data/
+local_finetuning/artifacts/
+local_finetuning/results/
 
 # Frontend (not needed for backend)
 frontend/node_modules/
