@@ -3,6 +3,7 @@ from backend.models.file import File
 from backend.storage.kv import get_kv, set_kv
 from backend.storage.ipfs import add_file_to_cluster
 from backend.rag.vector_store import get_vector_store
+from backend.rag.config import EMBEDDING_MODEL
 from backend.rag.indexing import process_file_for_rag
 import mimetypes
 from io import BytesIO
@@ -98,6 +99,7 @@ def upload_file(file: File, path: str, username: str, skip_ai_processing: bool) 
                 file_obj.mark_rag_ready(
                     rag_result.chunk_count,
                     rag_result.embedding_model_name,
+                    rag_result.embedding_collection,
                 )
                 logger.info(f"Successfully processed {filename} for RAG for user {username}")
             else:
@@ -110,7 +112,7 @@ def upload_file(file: File, path: str, username: str, skip_ai_processing: bool) 
         except Exception as e:
             logger.error(f"RAG processing error for {filename}: {e}")
             response_data['rag_processed'] = False
-            file_obj.mark_rag_failed(str(e), "gemini-embedding-001")
+            file_obj.mark_rag_failed(str(e), EMBEDDING_MODEL)
 
     elif skip_ai_processing:
         response_data['rag_skipped'] = True

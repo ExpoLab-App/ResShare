@@ -6,8 +6,10 @@ from backend.controller.helpers import (
     login_required,
     route_logger,
 )
-from backend.services.answer_service import GeminiGenerationClient
+from backend.services.answer_service import LocalGenerationClient, GenerationError
 from backend.rag.retrieval import search
+from backend.rag.config import EMBEDDING_MODEL, collection_name
+from backend.rag.prompts import ABSTENTION
 
 def register_chat_routes(app, logger):
     @app.route('/chat', methods=['POST'])
@@ -16,26 +18,28 @@ def register_chat_routes(app, logger):
         try:
             data = request.get_json()
 
-            if not data or 'query' not in data:
+            if not isinstance(data, dict) or 'query' not in data:
                 return jsonify({'error': 'Query is required'}), 400
 
+            if not isinstance(data['query'], str):
+                return jsonify({'error': 'Query must be text'}), 400
             query = data['query'].strip()
             if not query:
                 return jsonify({'error': 'Query cannot be empty'}), 400
 
             username = session['username']
 
-            relevant_chunks = search(username, query, top_k=5)
-            #TODO: Implement reranking and more sophisticated answer generation
+            generation_client = LocalGenerationClient()
+            generation_client.select_context(query, [])
+            relevant_chunks = generation_client.select_context(query, search(username, query, top_k=5))
 
             if not relevant_chunks:
                 return jsonify({
-                    'answer': "I couldn't find any relevant information in your uploaded files to answer this question. Please make sure you have uploaded text-based documents (PDF, DOCX, or TXT files).",
+                    'answer': ABSTENTION,
                     'sources': [],
                     'chunks_found': 0
                 }), 200
 
-            generation_client = GeminiGenerationClient("gemini-2.5-flash")
             answer = generation_client.generate_answer(query, relevant_chunks)
 
             sources = []
@@ -55,6 +59,12 @@ def register_chat_routes(app, logger):
                 'chunks_found': len(relevant_chunks)
             }), 200
 
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+        except GenerationError:
+            return jsonify({'error': 'Local model could not complete the answer'}), 502
+        except RuntimeError:
+            return jsonify({'error': 'Document retrieval is temporarily unavailable'}), 503
         except Exception as e:
             route_logger.error(f"Chat endpoint error: {e}")
             return jsonify({'error': 'An error occurred while processing your question'}), 500
@@ -65,7 +75,7 @@ def register_chat_routes(app, logger):
         try:
             username = session['username']
             root = get_root_node(username)
-            stats = get_indexed_file_stats(root) if root else {
+            stats = get_indexed_file_stats(root, EMBEDDING_MODEL, collection_name()) if root else {
                 'total_chunks': 0,
                 'total_files': 0,
                 'files': [],

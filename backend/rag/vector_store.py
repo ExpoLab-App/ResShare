@@ -2,7 +2,9 @@
 import os
 from typing import List, Dict
 import logging
-from backend.rag.embeddings import GeminiEmbeddingClient
+import numpy as np
+from backend.rag.embeddings import LocalEmbeddingClient
+from backend.rag.config import EMBEDDING_MODEL, EMBEDDING_DIMENSION, collection_name
 from qdrant_client import QdrantClient, models
 
 logging.basicConfig(level=logging.INFO)
@@ -12,14 +14,14 @@ class QDrantVectorStore:
     def __init__(
         self,
         qdrant_url: str = "http://localhost:6333",
-        embedding_model_name: str = "gemini-embedding-001",
-        embedding_dimension: int = 768
+        embedding_model_name: str = EMBEDDING_MODEL,
+        embedding_dimension: int = EMBEDDING_DIMENSION
         ):
         self.qdrant_client = QdrantClient(url=qdrant_url)
         self._collection_ready = False
         self.embedding_model_name = embedding_model_name
         self.embedding_dimension = embedding_dimension
-        self.collection_name = "resshare_vectors"
+        self.collection_name = collection_name()
 
     def _ensure_collection(self) -> bool:
             if self._collection_ready:
@@ -35,7 +37,12 @@ class QDrantVectorStore:
                         ),
                     )
 
-                for field_name in ("user_id", "document_id"):
+                info = self.qdrant_client.get_collection(self.collection_name)
+                vectors = info.config.params.vectors
+                if not isinstance(vectors, models.VectorParams) or vectors.size != self.embedding_dimension or vectors.distance != models.Distance.COSINE:
+                    raise ValueError("Collection vector configuration does not match local embeddings")
+
+                for field_name in ("user_id", "document_id", "embedding_model"):
                     self.qdrant_client.create_payload_index(
                         collection_name=self.collection_name,
                         field_name=field_name,
@@ -68,10 +75,13 @@ class QDrantVectorStore:
 
                 texts = [chunk["text"] for chunk in chunks]
                 logger.info("Preparing to add %s chunks for user '%s'", len(texts), username)
-                embedding_client = GeminiEmbeddingClient(self.embedding_model_name, self.embedding_dimension)
+                embedding_client = LocalEmbeddingClient(self.embedding_model_name, self.embedding_dimension)
                 embeddings = embedding_client.generate_document_embeddings(texts)
-                if embeddings.size == 0:
+                if embeddings.shape != (len(chunks), self.embedding_dimension) or not np.isfinite(embeddings).all():
                     return False
+
+                if any(c["metadata"]["user_id"] != username or c["metadata"]["document_id"] != chunks[0]["metadata"]["document_id"] for c in chunks):
+                    raise ValueError("Chunks must belong to one document and authenticated user")
 
                 #Deleting old chunks for the same document before adding new ones
                 document_id = chunks[0]["metadata"]["document_id"]
@@ -91,6 +101,7 @@ class QDrantVectorStore:
                         "chunk_index": metadata["chunk_index"],
                         "chunk_text": chunk["text"],
                         "embedding_model": self.embedding_model_name,
+                        "embedding_collection": self.collection_name,
                     }
                     points.append(
                         models.PointStruct(
@@ -126,15 +137,14 @@ class QDrantVectorStore:
             List of relevant chunks with scores
         """
         if not self._ensure_collection():
-            return []
+            raise RuntimeError("Local retrieval collection is unavailable")
 
         try:
-            embedding_client = GeminiEmbeddingClient(embedding_model=self.embedding_model_name, embedding_dimensions=self.embedding_dimension)
+            embedding_client = LocalEmbeddingClient(embedding_model=self.embedding_model_name, embedding_dimensions=self.embedding_dimension)
             query_embedding = embedding_client.generate_query_embeddings([query])
 
-            if query_embedding.size == 0:
-                logger.warning("Query embedding generation failed for user '%s'", username)
-                return []
+            if query_embedding.shape != (1, self.embedding_dimension) or not np.isfinite(query_embedding).all():
+                raise ValueError("Invalid query embedding")
 
             response = self.qdrant_client.query_points(
                 collection_name=self.collection_name,
@@ -143,8 +153,9 @@ class QDrantVectorStore:
                     must=[
                         models.FieldCondition(
                             key="user_id",
-                            match=models.MatchValue(value=username), #maybe username is not the best identifier, but for now it works
-                        )
+                            match=models.MatchValue(value=username),
+                        ),
+                        models.FieldCondition(key="embedding_model", match=models.MatchValue(value=self.embedding_model_name))
                     ]
                 ),
                 limit=top_k,
@@ -183,7 +194,7 @@ class QDrantVectorStore:
 
         except Exception as exc:
             logger.error("Failed to search Qdrant: %s", exc)
-            return []
+            raise RuntimeError("Local retrieval failed") from exc
 
     def delete_documents(self, username: str, document_ids: List[str]) -> bool:
         """Delete all chunks owned by a user for the supplied document IDs."""

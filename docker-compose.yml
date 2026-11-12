@@ -11,8 +11,11 @@ services:
       - "18080:8080"  # IPFS Gateway (host port changed to avoid 8080 conflict)
       - "9094:9094"  # IPFS Cluster API
     environment:
-      # Set your Google API key here or use .env file
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - LOCAL_LLM_BASE_URL=${LOCAL_LLM_BASE_URL:-http://host.docker.internal:8081/v1}
+      - LOCAL_LLM_MODEL=${LOCAL_LLM_MODEL:-resshare-local}
+      - LOCAL_LLM_TIMEOUT=${LOCAL_LLM_TIMEOUT:-120}
+      - RAG_COLLECTION=${RAG_COLLECTION:-resshare_bge_small_en_v15_v1}
+      - FASTEMBED_CACHE_PATH=/app/model-cache
       - FLASK_ENV=production
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
       # Add your Vercel or other frontend URLs (comma-separated)
@@ -20,9 +23,12 @@ services:
       - STORAGE_TYPE=${STORAGE_TYPE}
       - KV_SERVICE_URL=${KV_SERVICE_URL}
       - QDRANT_VECTOR_DB_URL=${QDRANT_VECTOR_DB_URL:-http://qdrant:6333}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - qdrant
     volumes:
+      - model_cache:/app/model-cache
       # Persist IPFS data
       - ipfs_data:/root/.ipfs
       # Persist IPFS Cluster data
@@ -45,6 +51,7 @@ services:
     restart: "no"
 
 volumes:
+  model_cache:
   ipfs_data:
   ipfs_cluster_data:
   qdrant_data:

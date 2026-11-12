@@ -1,0 +1,6 @@
+{
+  "neural:7097": "Incoherent keyword-stuffed source; unrelated financial text does not establish the product premise.",
+  "squad:5726d25e5951b619008f7f12": "Question asks which country; target is military machinery instead of the Soviet Union.",
+  "squad:5733797b4776f41900660b6e": "Question reverses cause and effect: passage describes the crisis affecting oil prices, not oil prices affecting the crisis.",
+  "squad:5a07dcd73fc8740018207024": "Abstention target conflicts with passage describing recent T-ray imaging developments."
+}

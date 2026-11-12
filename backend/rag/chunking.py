@@ -36,7 +36,7 @@ def chunk_text(text: str, metadata: Dict) -> List[Dict]:
                     'chunk_id': str(uuid5( # UUIDv5 gives stable, idempotent IDs:same document + same chunk index → same UUID
                         NAMESPACE_URL,
                         (
-                            f"reshare:{metadata['document_id']}:{i}"
+                            f"reshare:{metadata['user_id']}:{metadata['document_id']}:{i}"
                         ),
                     ))
                 }

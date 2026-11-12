@@ -26,9 +26,9 @@ ResShare is a decentralized file sharing application that allows users to secure
 - **Storage**: ResilientDB for Metadata storage, IPFS for File Storage, QDrant for Vector Storage
 - **Authentication**: Session-based authentication
 - **AI/ML**: 
-  - Google Gemini for embedding generation
+  - Local BGE small en v1.5 via FastEmbed for embedding generation
   - Qdrant for persistent vector search
-  - Gemini 2.5 Flash for response generation
+  - Local Qwen via a llama.cpp chat-completions endpoint for response generation
   - LangChain for text processing
 
 ## Prerequisites
@@ -38,7 +38,7 @@ ResShare is a decentralized file sharing application that allows users to secure
 - uv (preferred)
 - IPFS daemon running locally
 - Qdrant (started automatically by Docker Compose)
-- Gemini API key for document embedding and generated responses
+- A separately started local llama.cpp server for generated responses (see `local_finetuning/README.md`)
 
 ## Installation
 
@@ -63,8 +63,9 @@ cd ..
 
 4. **Set up AI features:**
 ```bash
-# Required for document embeddings and generated answers
-export GOOGLE_API_KEY="your-gemini-api-key-here"
+# Host-run backend; Compose defaults to host.docker.internal instead
+export LOCAL_LLM_BASE_URL="http://127.0.0.1:8081/v1"
+export LOCAL_LLM_MODEL="resshare-local"
 ```
 
 ## Running the Application
@@ -113,13 +114,22 @@ The application will be available at:
 
 ## Configuration
 
-### Gemini Configuration
-Document embedding requires a Gemini API key. The same key enables generated
-answers; without it, indexing fails while the uploaded file remains available.
+### Local AI Configuration
+FastEmbed downloads BGE small en v1.5 on first use and runs embeddings locally.
+Generation requires a separately started local chat server. See
+[the local fine-tuning runbook](local_finetuning/README.md) for model setup.
 
-```bash
-export GOOGLE_API_KEY="your-key-here"
-```
+`RAG_COLLECTION` defaults to `resshare_bge_small_en_v15_v1` (384 dimensions).
+Existing Gemini vectors remain in `resshare_vectors` and cannot be reused.
+Old uploads need reindexing before local retrieval can find them; statistics
+count only metadata matching the local model and collection. Follow the
+[index migration checklist](local_finetuning/PLAN.md#index-migration-and-rollback)
+before cutting over an existing deployment.
+
+The backend bounds the prompt to 6,000 UTF-8 bytes and output to 512 tokens for
+an 8K context server. Sources reflect only whole chunks actually sent to the
+model. Retrieval/model failures return HTTP 503/502 rather than a successful
+answer. No server is started automatically.
 
 ## Usage
 
@@ -149,6 +159,6 @@ User Query → Query Embedding → Vector Search → Context → LLM → Respons
 ### Components
 - **Text Extractors**: PDF (PyPDF2), DOCX (python-docx), TXT (UTF-8)
 - **Chunking**: LangChain RecursiveCharacterTextSplitter
-- **Embeddings**: Google Gemini API (gemini-embedding-001) with configurable dimensions (768/1536/3072)
+- **Embeddings**: FastEmbed BAAI/bge-small-en-v1.5, 384 dimensions
 - **Vector DB**: Qdrant with authenticated per-user payload filtering
-- **LLM**: Gemini 2.5 Flash (optional) or extractive fallback
+- **LLM**: Local OpenAI-compatible chat endpoint, shared grounded prompt and non-thinking mode

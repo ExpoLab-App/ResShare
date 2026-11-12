@@ -61,3 +61,5 @@ AGENTS.md
 qa-test.txt
 temp/
 dev-environment-deployment.md
+evals/rag/results/*
+evals/rag/retrieval/.cache/

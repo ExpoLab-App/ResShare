@@ -31,7 +31,7 @@ class QdrantRAGManagerTest(unittest.TestCase):
                     vectors.append([0.0, 0.0, 1.0])
             return np.array(vectors, dtype=np.float32)
 
-        embedding_patch = patch("backend.rag.vector_store.GeminiEmbeddingClient")
+        embedding_patch = patch("backend.rag.vector_store.LocalEmbeddingClient")
         embedding_client_class = embedding_patch.start()
         embedding_client = embedding_client_class.return_value
         embedding_client.generate_document_embeddings.side_effect = fake_embeddings
@@ -85,6 +85,9 @@ class QdrantRAGManagerTest(unittest.TestCase):
             "bob",
             self.chunks("bob", shared_document_id, "bob.txt", "alpha"),
         )
+
+        self.assertEqual(len(self.manager.search_user_vector_db("alice", "alpha")), 1)
+        self.assertEqual(len(self.manager.search_user_vector_db("bob", "alpha")), 1)
 
         self.assertTrue(self.manager.delete_documents("alice", [shared_document_id]))
 

@@ -80,11 +80,13 @@ def collect_indexed_document_ids(node):
     return document_ids
 
 
-def get_indexed_file_stats(root):
+def get_indexed_file_stats(root, embedding_model=None, embedding_collection=None):
     """Build knowledge-base statistics from authoritative file metadata."""
     indexed_files = []
     for path, file_obj in collect_files_recursively(root):
-        if file_obj.rag_status == "ready":
+        if (file_obj.rag_status == "ready"
+                and (embedding_model is None or file_obj.embedding_model == embedding_model)
+                and (embedding_collection is None or file_obj.embedding_collection == embedding_collection)):
             indexed_files.append((path, file_obj))
 
     return {

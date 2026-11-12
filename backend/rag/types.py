@@ -1,6 +1,6 @@
 from typing import Optional
 import logging
-import os
+from backend.rag.config import EMBEDDING_MODEL, collection_name
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -9,22 +9,12 @@ class RAGProcessResult:
         self,
         success: bool,
         chunk_count: int = 0,
-        embedding_model_name: str = "gemini-embedding-001",
+        embedding_model_name: str = EMBEDDING_MODEL,
         error: Optional[str] = None,
         
     ):
+        self.embedding_collection = collection_name()
         self.success = success
         self.chunk_count = chunk_count
         self.error = error
         self.embedding_model_name = embedding_model_name
-
-class GeminiClientConfig:
-    def __init__(self, model_name: str = "gemini-embedding-001"):
-        self.api_key = self._load_api_key()
-        self.model_name = model_name
-
-    def _load_api_key(self):
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            logger.error("GOOGLE_API_KEY not found in environment variables")
-        return api_key

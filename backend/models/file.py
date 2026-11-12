@@ -17,6 +17,7 @@ class File:
         embedding_model=None,
         indexed_at=None,
         rag_error=None,
+        embedding_collection=None,
     ):
         self.cid = cid  # IPFS CID
         self.size = size
@@ -27,11 +28,13 @@ class File:
         self.rag_status = rag_status
         self.chunk_count = chunk_count
         self.embedding_model = embedding_model
+        self.embedding_collection = embedding_collection
         self.indexed_at = indexed_at
         self.rag_error = rag_error
 
 
-    def mark_rag_ready(self, chunk_count, embedding_model):
+    def mark_rag_ready(self, chunk_count, embedding_model, embedding_collection=None):
+        self.embedding_collection = embedding_collection
         self.rag_status = "ready"
         self.chunk_count = chunk_count
         self.embedding_model = embedding_model
@@ -39,6 +42,7 @@ class File:
         self.rag_error = None
 
     def mark_rag_failed(self, error, embedding_model):
+        self.embedding_collection = None
         self.rag_status = "failed"
         self.chunk_count = 0
         self.embedding_model = embedding_model
@@ -56,6 +60,7 @@ class File:
             "rag_status": self.rag_status,
             "chunk_count": self.chunk_count,
             "embedding_model": self.embedding_model,
+            "embedding_collection": self.embedding_collection,
             "indexed_at": self.indexed_at.isoformat() if self.indexed_at else None,
             "rag_error": self.rag_error,
         }
@@ -76,6 +81,7 @@ class File:
             rag_status=data.get("rag_status", "not_indexed"),
             chunk_count=data.get("chunk_count", 0),
             embedding_model=data.get("embedding_model"),
+            embedding_collection=data.get("embedding_collection"),
             indexed_at=datetime.fromisoformat(indexed_at_value) if indexed_at_value else None,
             rag_error=data.get("rag_error"),
         )
@@ -96,6 +102,7 @@ class File:
             and self.rag_status == other.rag_status
             and self.chunk_count == other.chunk_count
             and self.embedding_model == other.embedding_model
+            and self.embedding_collection == other.embedding_collection
             and self.indexed_at == other.indexed_at
             and self.rag_error == other.rag_error
         )
